@@ -66,3 +66,6 @@ temp/
 Thumbs.db
 .Spotlight-V100
 .Trashes
+
+**/node_modules/
+dastawez.ai-main/
