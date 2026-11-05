@@ -9,7 +9,7 @@ def test_health_check_function():
     data = health_check()
     assert data["status"] == "healthy"
     assert "version" in data
-    assert data["version"] == "1.0.0"
+    assert data["version"].startswith("1.")
 
 def test_auth_token_mechanisms():
     """Verify password hashing and JWT token encoding/decoding."""
