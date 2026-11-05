@@ -1,25 +1,22 @@
 # Changelog
 
-All notable changes to DocuMind AI will be documented in this file.
+All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-06
 
-### Planned Features
-- Vector database integration (Qdrant, Pinecone)
-- Advanced NLP models for better analysis
-- Multi-language support (i18n)
-- Export functionality (PDF/CSV)
-- Batch document upload
-- Collaborative team workspaces
+### Added
+- **Document Export Utility**: Added `GET /api/v1/documents/{id}/export?format=json|csv` endpoint supporting structural chunk and metadata extraction.
+- **Glassmorphic Toast Notifications**: Created `ToastContext` and `Toast.jsx` for non-intrusive feedback across upload, query, and authentication events.
+- **Shimmer Skeleton Loaders**: Implemented `SkeletonLoader.jsx` with GPU-accelerated CSS shimmer animation for metric cards, charts, and table rows.
+- **Enhanced OpenAPI Documentation**: Enriched Swagger specification with detailed tag taxonomy, contact information, and license metadata.
+- **Automated Test Suite Expansion**: Added unit tests for document export, CSV formatting limits, and input validation guards (`8 passed`).
 
-### Under Consideration
-- Mobile application (React Native)
-- Browser extension for quick uploads
-- Advanced analytics dashboard
-- Cloud storage integration (S3, GCS)
+### Changed
+- **Async Lifespan Architecture**: Migrated from deprecated `@app.on_event("startup")` to modern Starlette `@asynccontextmanager lifespan(app: FastAPI)` pattern.
+- **Request Validation Constraints**: Enhanced `AskRequest` with string boundaries, non-empty whitespace validators, and structured example queries.
 
 ---
 
@@ -45,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQLite database for metadata storage
 - Document parsing using Unstructured library
 - Text chunking and processing
-- Mock vector store implementation
+- Hybrid vector store implementation (TF-IDF + Qdrant)
 - Authentication endpoints (login, register, logout)
 - Document CRUD operations
 - Q&A endpoint with context retrieval
@@ -72,66 +69,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git ignore rules for clean repository
 - Setup automation scripts
 - Production deployment guides
-
-### Documentation
-- Comprehensive README with badges and features
-- DEPLOYMENT guide for multiple platforms
-- CONTRIBUTING guide with coding standards
-- API documentation with examples
-- Project structure documentation
-- Quick start guides
-
-### Technical Details
-- Python 3.8+ compatibility
-- Node.js 16+ support
-- Chart.js 4.4 integration
-- React Router 7.11 for navigation
-- SQLAlchemy for database ORM
-- Pytest for testing framework
-
-### Known Issues
-- Mock vector store (planned: real vector DB integration)
-- Single-user focus (planned: multi-user collaboration)
-- Basic rate limiting (planned: advanced throttling)
-
----
-
-## Version History
-
-### Version Numbering
-- **Major**: Breaking changes or major new features
-- **Minor**: New features, backward-compatible
-- **Patch**: Bug fixes and minor improvements
-
-### Releases
-- v1.0.0 - Initial release (March 2024)
-
----
-
-## Contributing
-
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file
-for guidelines on how to contribute to this project.
-
-### Types of Contributions
-- Bug reports and fixes
-- Feature requests and implementations
-- Documentation improvements
-- Performance optimizations
-- Testing and quality assurance
-
-### Recognition
-Contributors will be acknowledged in release notes and the main README.
-
----
-
-## Support
-
-For questions, issues, or feature requests, please:
-- Open a GitHub issue
-- Check existing documentation
-- Review FAQ and troubleshooting guides
-
----
-
-**Last Updated:** March 3, 2024

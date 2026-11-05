@@ -135,7 +135,7 @@ def get_document_details(id: int, db: Session = Depends(get_db)):
 @router.get("/documents/{id}/export", summary="Export Document Metadata & Chunks")
 def export_document_data(
     id: int,
-    format: str = Query("json", regex="^(json|csv)$", description="Export format: json or csv"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Export format: json or csv"),
     db: Session = Depends(get_db)
 ):
     """Exports document structural metrics and text chunks as downloadable JSON or CSV."""
@@ -149,18 +149,19 @@ def export_document_data(
     if format == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Chunk_ID", "Document_ID", "Filename", "Page_Number", "Element_Type", "Chunk_Size", "Chunk_Text"])
+        writer.writerow(["Chunk_ID", "Document_ID", "Filename", "Page_Number", "Element_Type", "Chunk_Size", "Chunk_Preview"])
         for c in chunks:
             c_dict = c.to_dict()
             meta = c_dict.get("metadata", {})
+            clean_text = (c.chunk_text or "").replace("\n", " ").strip()
             writer.writerow([
                 c_dict.get("id"),
                 doc.id,
                 doc.filename,
                 meta.get("page_number", 1),
                 meta.get("element_type", "NarrativeText"),
-                meta.get("chunk_size", len(c.chunk_text or "")),
-                (c.chunk_text or "").replace("\n", " ").strip()
+                meta.get("chunk_size", len(clean_text)),
+                clean_text[:500]
             ])
         output.seek(0)
         return Response(
