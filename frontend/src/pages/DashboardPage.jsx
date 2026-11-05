@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import UploadSection from '../components/UploadSection';
 import AnalysisSection from '../components/AnalysisSection';
 import MatrixBackground from '../components/MatrixBackground';
+import { MetricSkeleton, ChartSkeleton } from '../components/SkeletonLoader';
 import { documentService } from '../services/historyService';
 
 const DashboardPage = () => {
@@ -30,7 +31,6 @@ const DashboardPage = () => {
   };
 
   const handleUploadSuccess = (uploadResult) => {
-    // When upload finishes, reload or set active document
     documentService.getDocumentDetails(uploadResult.document_id)
       .then((doc) => setActiveDocument(doc))
       .catch(() => loadLatestDocument());
@@ -91,7 +91,22 @@ const DashboardPage = () => {
             </button>
           </div>
 
-          <AnalysisSection documentData={activeDocument} />
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <MetricSkeleton />
+                <MetricSkeleton />
+                <MetricSkeleton />
+                <MetricSkeleton />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                <ChartSkeleton />
+                <ChartSkeleton />
+              </div>
+            </div>
+          ) : (
+            <AnalysisSection documentData={activeDocument} />
+          )}
         </div>
       </main>
     </div>
@@ -99,4 +114,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

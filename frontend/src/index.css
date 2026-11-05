@@ -190,3 +190,16 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(52, 211, 153, 0.3);
 }
 
+
+/* Shimmer Skeleton Loaders */
+.skeleton-line, .skeleton-box {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
