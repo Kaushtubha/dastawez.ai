@@ -1,9 +1,11 @@
 import os
+import io
+import csv
 import json
 import shutil
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -21,7 +23,7 @@ from app.ingestion.chunker import create_chunks
 
 router = APIRouter()
 
-@router.post("/upload-docs")
+@router.post("/upload-docs", summary="Upload & Process Document")
 async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
@@ -36,11 +38,9 @@ async def upload_document(
             detail=f"Unsupported file format '{ext}'. Supported formats: {', '.join(settings.ALLOWED_EXTENSIONS)}"
         )
 
-    # Ensure uploads directory exists
     settings.UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
     destination_path = settings.UPLOAD_FOLDER / filename
 
-    # Save uploaded file stream
     try:
         with open(destination_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -61,23 +61,19 @@ async def upload_document(
             detail=f"File exceeds maximum allowed size ({settings.MAX_UPLOAD_SIZE // (1024*1024)} MB)"
         )
 
-    # Parse document elements & metrics
     try:
         parsed_result = parse_document(str(destination_path), filename)
         elements = parsed_result.get("elements", [])
         analysis = parsed_result.get("analysis", {})
 
-        # Generate Chunks
         chunks_data = create_chunks(elements, filename)
 
-        # Update metadata JSON
         doc_metadata = {
             "chunks_added": len(chunks_data),
             "upload_timestamp": None,
             "analysis": analysis
         }
 
-        # Save to database
         db_doc = create_document(
             db=db,
             filename=filename,
@@ -87,7 +83,6 @@ async def upload_document(
             metadata_json=json.dumps(doc_metadata)
         )
 
-        # Save chunks to database
         for c in chunks_data:
             create_chunk(
                 db=db,
@@ -113,7 +108,7 @@ async def upload_document(
         )
 
 
-@router.get("/document-history")
+@router.get("/document-history", summary="List All Ingested Documents")
 def list_documents(db: Session = Depends(get_db)):
     """Retrieves all uploaded documents with metadata & statistics."""
     docs = get_documents(db)
@@ -123,28 +118,76 @@ def list_documents(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/documents/{id}")
+@router.get("/documents/{id}", summary="Get Single Document Details")
 def get_document_details(id: int, db: Session = Depends(get_db)):
     """Retrieves specific document details and chunk previews."""
     doc = get_document_by_id(db, id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     
     chunks = get_chunks_by_document(db, id)
     doc_dict = doc.to_dict()
-    doc_dict["chunks"] = [c.to_dict() for c in chunks[:50]] # Limit chunk preview
+    doc_dict["chunks"] = [c.to_dict() for c in chunks[:50]]
     doc_dict["chunks_count"] = len(chunks)
     return doc_dict
 
 
-@router.delete("/documents/{id}")
+@router.get("/documents/{id}/export", summary="Export Document Metadata & Chunks")
+def export_document_data(
+    id: int,
+    format: str = Query("json", regex="^(json|csv)$", description="Export format: json or csv"),
+    db: Session = Depends(get_db)
+):
+    """Exports document structural metrics and text chunks as downloadable JSON or CSV."""
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    chunks = get_chunks_by_document(db, id)
+    doc_dict = doc.to_dict()
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Chunk_ID", "Document_ID", "Filename", "Page_Number", "Element_Type", "Chunk_Size", "Chunk_Text"])
+        for c in chunks:
+            c_dict = c.to_dict()
+            meta = c_dict.get("metadata", {})
+            writer.writerow([
+                c_dict.get("id"),
+                doc.id,
+                doc.filename,
+                meta.get("page_number", 1),
+                meta.get("element_type", "NarrativeText"),
+                meta.get("chunk_size", len(c.chunk_text or "")),
+                (c.chunk_text or "").replace("\n", " ").strip()
+            ])
+        output.seek(0)
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=document_{id}_export.csv"}
+        )
+
+    export_payload = {
+        "document": doc_dict,
+        "total_chunks": len(chunks),
+        "chunks": [c.to_dict() for c in chunks]
+    }
+    return Response(
+        content=json.dumps(export_payload, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename=document_{id}_export.json"}
+    )
+
+
+@router.delete("/documents/{id}", summary="Delete Document and Chunks")
 def remove_document(id: int, db: Session = Depends(get_db)):
     """Deletes a document and its associated chunks and storage file."""
     doc = get_document_by_id(db, id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     
-    # Try deleting file if exists
     if doc.file_path and os.path.exists(doc.file_path):
         try:
             os.remove(doc.file_path)
@@ -153,4 +196,3 @@ def remove_document(id: int, db: Session = Depends(get_db)):
 
     success = delete_document(db, id)
     return {"success": success, "message": f"Document {id} deleted successfully"}
-
