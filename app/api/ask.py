@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.db.metadata import get_db, get_document_by_id, get_documents
@@ -8,22 +8,59 @@ from app.core.agent import ask_question
 
 router = APIRouter()
 
+class SourceCitation(BaseModel):
+    chunk_id: Optional[int] = None
+    filename: str
+    page_number: int
+    element_type: str
+    score: float
+    excerpt: str
+
 class AskRequest(BaseModel):
-    question: str
-    document_id: Optional[int] = None
+    question: str = Field(
+        ...,
+        min_length=2,
+        max_length=1500,
+        description="The natural language question to ask against document context.",
+        examples=["What are the termination clauses in this agreement?"]
+    )
+    document_id: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Optional unique identifier of the document to scope the query."
+    )
+
+    @field_validator("question")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        clean = v.strip()
+        if not clean:
+            raise ValueError("Question cannot be blank or contain only whitespace.")
+        return clean
 
 class AskResponse(BaseModel):
     question: str
     answer: str
-    confidence: float
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Calculated confidence score between 0.0 and 1.0.")
     sources: List[Dict[str, Any]]
 
-@router.post("/ask", response_model=AskResponse)
+@router.post("/ask", response_model=AskResponse, summary="Query Document Context")
 def ask_document_endpoint(
     req: AskRequest,
     db: Session = Depends(get_db)
 ):
-    """Ask natural language questions about one or all processed documents."""
+    """
+    Submits a natural language query against indexed document chunks.
+    Returns synthesized answer, attribution citations, and confidence scoring.
+    """
+    if req.document_id:
+        doc = get_document_by_id(db, req.document_id)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID {req.document_id} not found."
+            )
+
     result = ask_question(db=db, question=req.question, document_id=req.document_id)
     return {
         "question": req.question,
@@ -32,17 +69,16 @@ def ask_document_endpoint(
         "sources": result["sources"]
     }
 
-@router.get("/analysis/{id}")
+@router.get("/analysis/{id}", summary="Get Document Analysis for Chart.js")
 def get_document_analysis(id: int, db: Session = Depends(get_db)):
     """Retrieves document analysis and chart metrics formatted for Chart.js."""
     doc = get_document_by_id(db, id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     
     doc_dict = doc.to_dict()
     analysis = doc_dict.get("metadata", {}).get("analysis", {})
     
-    # Format for Chart.js
     element_types = analysis.get("element_types", {})
     keywords = analysis.get("word_frequency", {})
 
@@ -85,17 +121,17 @@ def get_document_analysis(id: int, db: Session = Depends(get_db)):
         }
     }
 
-@router.get("/stats/{id}")
+@router.get("/stats/{id}", summary="Get Document Summary Statistics")
 def get_document_stats(id: int, db: Session = Depends(get_db)):
     """Retrieves document statistics summary."""
     doc = get_document_by_id(db, id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     
     doc_dict = doc.to_dict()
     analysis = doc_dict.get("metadata", {}).get("analysis", {})
     total_chars = analysis.get("total_text_length", 0)
-    word_count = total_chars // 5 # Estimation
+    word_count = total_chars // 5
     reading_time_min = max(1, round(word_count / 200))
 
     return {
@@ -109,4 +145,3 @@ def get_document_stats(id: int, db: Session = Depends(get_db)):
         "estimated_reading_time_minutes": reading_time_min,
         "upload_date": doc.upload_date.isoformat() if doc.upload_date else None
     }
-
