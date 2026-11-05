@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -29,6 +30,13 @@ TAGS_METADATA = [
     }
 ]
 
+# Lifespan Context Manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize database tables on application boot
+    init_db()
+    yield
+
 # Initialize FastAPI application
 app = FastAPI(
     title=f"{settings.APP_NAME} Platform",
@@ -49,7 +57,8 @@ app = FastAPI(
         "url": "https://opensource.org/licenses/MIT",
     },
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS Configuration
@@ -63,11 +72,6 @@ app.add_middleware(
 
 # Include API Router
 app.include_router(api_router)
-
-# Database Startup
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 # Health Checks
 @app.get("/health", tags=["System"])
