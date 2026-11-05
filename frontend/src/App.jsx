@@ -1,9 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import CustomCursor from './components/CustomCursor';
 import ScrollProgress from './components/ScrollProgress';
 import FloatingParticles from './components/FloatingParticles';
+import Toast from './components/Toast';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -66,15 +68,17 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <CustomCursor />
-        <ScrollProgress />
-        <FloatingParticles />
-        <AppRoutes />
-      </Router>
+      <ToastProvider>
+        <Router>
+          <CustomCursor />
+          <ScrollProgress />
+          <FloatingParticles />
+          <Toast />
+          <AppRoutes />
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }
 
 export default App;
-
