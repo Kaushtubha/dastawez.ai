@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import settings
-from app.db.metadata import init_db
+from app.db.metadata import init_db, SessionLocal, Document, DocumentChunk, User
 from app.api import api_router
 
 # OpenAPI Tags Metadata
@@ -120,7 +120,51 @@ def health_check():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.1.0"
+        "version": "1.2.0"
+    }
+
+@app.get("/api/v1/system/telemetry", tags=["System"])
+def system_telemetry_endpoint():
+    """
+    Returns platform resource telemetry, database size, storage utilization, and catalog health.
+    """
+    db = SessionLocal()
+    try:
+        total_docs = db.query(Document).count()
+        total_chunks = db.query(DocumentChunk).count()
+        total_users = db.query(User).count()
+    finally:
+        db.close()
+
+    # Calculate upload directory size
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_bytes = 0
+    if upload_dir.exists():
+        for p in upload_dir.rglob("*"):
+            if p.is_file():
+                upload_bytes += p.stat().st_size
+
+    # Calculate database file size if SQLite
+    db_file = Path("documind.db")
+    db_bytes = db_file.stat().st_size if db_file.exists() else 0
+
+    return {
+        "status": "operational",
+        "app": settings.APP_NAME,
+        "environment": settings.APP_ENV,
+        "version": "1.2.0",
+        "storage": {
+            "upload_directory": str(upload_dir),
+            "upload_size_bytes": upload_bytes,
+            "upload_size_mb": round(upload_bytes / (1024 * 1024), 2),
+            "database_size_bytes": db_bytes,
+            "database_size_kb": round(db_bytes / 1024, 2)
+        },
+        "catalog": {
+            "documents_indexed": total_docs,
+            "chunks_persisted": total_chunks,
+            "registered_users": total_users
+        }
     }
 
 # Mount static build files if available
