@@ -145,3 +145,61 @@ def get_document_stats(id: int, db: Session = Depends(get_db)):
         "estimated_reading_time_minutes": reading_time_min,
         "upload_date": doc.upload_date.isoformat() if doc.upload_date else None
     }
+
+@router.get("/documents/{id}/summary", summary="Generate Automated Executive Document Summary")
+def get_document_executive_summary(id: int, db: Session = Depends(get_db)):
+    """
+    Synthesizes an automated executive summary and highlights for an ingested document.
+    """
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {id} not found."
+        )
+
+    doc_dict = doc.to_dict()
+    meta = doc_dict.get("metadata", {})
+    analysis = meta.get("analysis", {})
+    chunks = meta.get("chunks", [])
+    keywords = list(analysis.get("word_frequency", {}).keys())[:6]
+
+    total_chars = analysis.get("total_text_length", 0)
+    word_count = total_chars // 5
+    reading_time = max(1, round(word_count / 200))
+    element_types = analysis.get("element_types", {})
+
+    # Generate synthesis highlights from initial chunks
+    highlights = []
+    for c in chunks[:5]:
+        txt = (c.get("text") or c.get("content") or "").strip()
+        if txt and len(txt) > 20:
+            snippet = txt[:160] + "..." if len(txt) > 160 else txt
+            highlights.append(snippet)
+
+    if not highlights:
+        highlights = [f"Processed document containing {analysis.get('total_elements', 0)} layout elements across {analysis.get('total_pages', 1)} page(s)."]
+
+    exec_summary = (
+        f"Document '{doc.filename}' ({doc.file_type or 'unspecified'}) comprises "
+        f"{analysis.get('total_pages', 1)} page(s) and {analysis.get('total_elements', 0)} parsed layout elements. "
+        f"Primary structural elements include: {', '.join(f'{k} ({v})' for k, v in element_types.items()) or 'standard text blocks'}. "
+        f"Estimated content volume is approximately {word_count} words (~{reading_time} min read)."
+    )
+
+    return {
+        "document_id": doc.id,
+        "filename": doc.filename,
+        "file_type": doc.file_type,
+        "executive_summary": exec_summary,
+        "key_takeaways": highlights,
+        "key_topics": keywords,
+        "metrics": {
+            "total_pages": analysis.get("total_pages", 1),
+            "total_elements": analysis.get("total_elements", 0),
+            "total_chunks": len(chunks),
+            "estimated_word_count": word_count,
+            "estimated_reading_time_minutes": reading_time
+        }
+    }
+
