@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import CustomCursor from './components/CustomCursor';
 import ScrollProgress from './components/ScrollProgress';
 import FloatingParticles from './components/FloatingParticles';
@@ -70,17 +71,19 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <CustomCursor />
-          <ScrollProgress />
-          <FloatingParticles />
-          <Toast />
-          <AppRoutes />
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
+            <CustomCursor />
+            <ScrollProgress />
+            <FloatingParticles />
+            <Toast />
+            <AppRoutes />
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

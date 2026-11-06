@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import ShortcutModal from './ShortcutModal';
 import api from '../services/api';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { toggleTheme, currentThemeConfig } = useTheme();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -87,6 +89,18 @@ const Navbar = () => {
         <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           👤 {user?.username || 'Profile'}
         </NavLink>
+
+        {/* Ambient Theme Selector Button */}
+        <button
+          onClick={toggleTheme}
+          className="btn-secondary"
+          style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem' }}
+          title={`Active Theme: ${currentThemeConfig?.name || 'Theme'}. Click to switch accent.`}
+        >
+          {currentThemeConfig?.icon || '🎨'}
+        </button>
+
+        {/* Keyboard Shortcuts Trigger Button */}
         <button
           onClick={() => setShowShortcuts(true)}
           className="btn-secondary"
@@ -95,6 +109,7 @@ const Navbar = () => {
         >
           ⌨️
         </button>
+
         <button onClick={handleLogout} className="btn-secondary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
           Logout
         </button>
