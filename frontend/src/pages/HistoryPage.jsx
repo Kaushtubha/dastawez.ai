@@ -7,6 +7,8 @@ import { documentService } from '../services/historyService';
 const HistoryPage = () => {
   const [documents, setDocuments] = useState([]);
   const [search, setSearch] = useState('');
+  const [formatFilter, setFormatFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState('date-desc');
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const navigate = useNavigate();
@@ -27,6 +29,15 @@ const HistoryPage = () => {
     }
   };
 
+  const getNormalizedType = (doc) => {
+    const t = (doc.file_type || '').toLowerCase();
+    const name = (doc.filename || '').toLowerCase();
+    if (t.includes('pdf') || name.endsWith('.pdf')) return 'PDF';
+    if (t.includes('docx') || t.includes('word') || name.endsWith('.docx') || name.endsWith('.doc')) return 'DOCX';
+    if (t.includes('txt') || t.includes('text') || name.endsWith('.txt')) return 'TXT';
+    return 'OTHER';
+  };
+
   const handleDelete = async (id, filename) => {
     if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) return;
     try {
@@ -37,9 +48,40 @@ const HistoryPage = () => {
     }
   };
 
-  const filteredDocs = documents.filter((d) =>
-    d.filename.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDocs = documents
+    .filter((d) => {
+      const matchesSearch = d.filename.toLowerCase().includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+      if (formatFilter === 'ALL') return true;
+      return getNormalizedType(d) === formatFilter;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date-desc') {
+        return new Date(b.upload_date || 0) - new Date(a.upload_date || 0);
+      }
+      if (sortBy === 'date-asc') {
+        return new Date(a.upload_date || 0) - new Date(b.upload_date || 0);
+      }
+      if (sortBy === 'name-asc') {
+        return a.filename.localeCompare(b.filename);
+      }
+      if (sortBy === 'size-desc') {
+        return (b.file_size || 0) - (a.file_size || 0);
+      }
+      if (sortBy === 'elements-desc') {
+        const elA = a.metadata?.analysis?.total_elements || 0;
+        const elB = b.metadata?.analysis?.total_elements || 0;
+        return elB - elA;
+      }
+      return 0;
+    });
+
+  const filterCounts = {
+    ALL: documents.length,
+    PDF: documents.filter((d) => getNormalizedType(d) === 'PDF').length,
+    DOCX: documents.filter((d) => getNormalizedType(d) === 'DOCX').length,
+    TXT: documents.filter((d) => getNormalizedType(d) === 'TXT').length
+  };
 
   return (
     <div>
@@ -65,20 +107,65 @@ const HistoryPage = () => {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.8rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '1.2rem' }}>🔍</span>
-          <input
-            type="text"
-            className="input-glass"
-            placeholder="Search documents by filename or keyword..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ border: 'none', background: 'transparent', padding: '0.4rem 0.5rem' }}
-          />
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-            {filteredDocs.length} of {documents.length} records
-          </span>
+        {/* Search, Filter Pills & Sort Controls */}
+        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.8rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '1.2rem' }}>🔍</span>
+            <input
+              type="text"
+              className="input-glass"
+              placeholder="Search documents by filename or keyword..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ border: 'none', background: 'transparent', padding: '0.4rem 0.5rem', flex: 1 }}
+            />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+              {filteredDocs.length} of {documents.length} records
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.8rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+            {/* Format Pills */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginRight: '0.2rem' }}>Format:</span>
+              {['ALL', 'PDF', 'DOCX', 'TXT'].map((fmt) => (
+                <button
+                  key={fmt}
+                  onClick={() => setFormatFilter(fmt)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: formatFilter === fmt ? 600 : 400,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    background: formatFilter === fmt ? 'var(--primary-glow)' : 'rgba(255, 255, 255, 0.04)',
+                    color: formatFilter === fmt ? '#fff' : 'var(--text-muted)',
+                    border: formatFilter === fmt ? '1px solid var(--primary-color)' : '1px solid var(--border-glass)'
+                  }}
+                >
+                  {fmt} ({filterCounts[fmt] || 0})
+                </button>
+              ))}
+            </div>
+
+            {/* Sorting Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>Sort By:</span>
+              <select
+                className="input-glass"
+                style={{ padding: '0.35rem 0.8rem', fontSize: '0.82rem', width: 'auto' }}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="date-desc">Upload Date (Newest)</option>
+                <option value="date-asc">Upload Date (Oldest)</option>
+                <option value="name-asc">Document Name (A-Z)</option>
+                <option value="size-desc">File Size (Largest)</option>
+                <option value="elements-desc">Elements Count (Most)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Document Table */}
@@ -165,4 +252,3 @@ const HistoryPage = () => {
 };
 
 export default HistoryPage;
-
