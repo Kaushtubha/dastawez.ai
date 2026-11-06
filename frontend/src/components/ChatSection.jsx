@@ -45,6 +45,35 @@ const ChatSection = ({ initialDocId = null }) => {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
+  const handleExportChat = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(messages, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `dastawez_chat_history_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    if (showToast) {
+      showToast('Exported conversation to JSON!', 'info', 2000);
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: 'init-1',
+        role: 'assistant',
+        content: 'Conversation cleared. You can start a new query below.',
+        confidence: 1.0,
+        sources: [],
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    if (showToast) {
+      showToast('Chat history cleared', 'info', 1500);
+    }
+  };
+
   const handleSend = async (queryText = inputQuery) => {
     const q = queryText.trim();
     if (!q || loading) return;
@@ -126,7 +155,9 @@ const ChatSection = ({ initialDocId = null }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(15, 12, 41, 0.3)'
+        background: 'rgba(15, 12, 41, 0.3)',
+        flexWrap: 'wrap',
+        gap: '0.8rem'
       }}>
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Intelligent Document Q&A</h2>
@@ -135,22 +166,43 @@ const ChatSection = ({ initialDocId = null }) => {
           </p>
         </div>
 
-        {/* Target Document Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Scope:</label>
-          <select
-            className="input-glass"
-            style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', width: 'auto', minWidth: '220px' }}
-            value={selectedDocId || ''}
-            onChange={(e) => setSelectedDocId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">All Documents in Archive</option>
-            {documents.map((doc) => (
-              <option key={doc.id} value={doc.id}>
-                {doc.filename}
-              </option>
-            ))}
-          </select>
+        {/* Toolbar & Target Scope */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Scope:</label>
+            <select
+              className="input-glass"
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', width: 'auto', minWidth: '180px' }}
+              value={selectedDocId || ''}
+              onChange={(e) => setSelectedDocId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">All Documents</option>
+              {documents.map((doc) => (
+                <option key={doc.id} value={doc.id}>
+                  {doc.filename}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={handleExportChat}
+              className="btn-secondary"
+              style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }}
+              title="Download conversation JSON"
+            >
+              📥 Export
+            </button>
+            <button
+              onClick={handleClearChat}
+              className="btn-secondary"
+              style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem', color: '#f87171' }}
+              title="Clear message thread"
+            >
+              🧹 Clear
+            </button>
+          </div>
         </div>
       </div>
 
