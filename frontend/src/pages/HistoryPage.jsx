@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MatrixBackground from '../components/MatrixBackground';
 import DocumentModal from '../components/DocumentModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { documentService } from '../services/historyService';
 
 const HistoryPage = () => {
@@ -12,6 +13,7 @@ const HistoryPage = () => {
   const [sortBy, setSortBy] = useState('date-desc');
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, id: null, filename: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,8 +41,17 @@ const HistoryPage = () => {
     return 'OTHER';
   };
 
-  const handleDelete = async (id, filename) => {
-    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) return;
+  const handleDeletePrompt = (id, filename) => {
+    setConfirmDelete({
+      isOpen: true,
+      id,
+      filename
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    const { id } = confirmDelete;
+    if (!id) return;
     try {
       await documentService.deleteDocument(id);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
@@ -49,6 +60,8 @@ const HistoryPage = () => {
       }
     } catch (err) {
       alert('Failed to delete document: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setConfirmDelete({ isOpen: false, id: null, filename: '' });
     }
   };
 
@@ -253,9 +266,10 @@ const HistoryPage = () => {
                               💬 Query
                             </button>
                             <button
-                              onClick={() => handleDelete(doc.id, doc.filename)}
+                              onClick={() => handleDeletePrompt(doc.id, doc.filename)}
                               className="btn-secondary"
                               style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#f87171' }}
+                              title="Delete Document"
                             >
                               🗑️
                             </button>
@@ -274,6 +288,17 @@ const HistoryPage = () => {
         {selectedDoc && (
           <DocumentModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
         )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmDelete.isOpen}
+          title="Delete Ingested Document"
+          message={`Are you sure you want to permanently delete "${confirmDelete.filename}"? This will purge all extracted chunks and layout metadata from the vector index.`}
+          confirmText="Delete Document"
+          confirmVariant="danger"
+          onConfirm={handleExecuteDelete}
+          onCancel={() => setConfirmDelete({ isOpen: false, id: null, filename: '' })}
+        />
       </main>
     </div>
   );
