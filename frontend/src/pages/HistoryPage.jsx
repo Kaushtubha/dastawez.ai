@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MatrixBackground from '../components/MatrixBackground';
+import DocumentModal from '../components/DocumentModal';
 import { documentService } from '../services/historyService';
 
 const HistoryPage = () => {
@@ -43,6 +44,9 @@ const HistoryPage = () => {
     try {
       await documentService.deleteDocument(id);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      if (selectedDoc && selectedDoc.id === id) {
+        setSelectedDoc(null);
+      }
     } catch (err) {
       alert('Failed to delete document: ' + (err.response?.data?.detail || err.message));
     }
@@ -205,8 +209,19 @@ const HistoryPage = () => {
                         <td style={{ padding: '1rem 1.5rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
                           #{doc.id}
                         </td>
-                        <td style={{ padding: '1rem 1.5rem', fontWeight: 600 }}>
-                          {doc.filename}
+                        <td
+                          style={{
+                            padding: '1rem 1.5rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            color: 'var(--text-main)'
+                          }}
+                          onClick={() => setSelectedDoc(doc)}
+                          title="Click to inspect metadata and chunks"
+                        >
+                          <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(255, 255, 255, 0.2)' }}>
+                            {doc.filename}
+                          </span>
                         </td>
                         <td style={{ padding: '1rem 1.5rem' }}>
                           <span className="badge badge-purple">{doc.file_type}</span>
@@ -222,6 +237,14 @@ const HistoryPage = () => {
                         </td>
                         <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => setSelectedDoc(doc)}
+                              className="btn-secondary"
+                              style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }}
+                              title="Inspect Extracted Chunks"
+                            >
+                              👁️ Inspect
+                            </button>
                             <button
                               onClick={() => navigate('/chat')}
                               className="btn-secondary"
@@ -246,6 +269,11 @@ const HistoryPage = () => {
             </table>
           </div>
         </div>
+
+        {/* Document Chunk Inspector Modal */}
+        {selectedDoc && (
+          <DocumentModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
+        )}
       </main>
     </div>
   );
