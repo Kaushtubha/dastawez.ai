@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ShortcutModal from './ShortcutModal';
 import api from '../services/api';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
     api.get('/health')
@@ -85,13 +87,22 @@ const Navbar = () => {
         <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           👤 {user?.username || 'Profile'}
         </NavLink>
+        <button
+          onClick={() => setShowShortcuts(true)}
+          className="btn-secondary"
+          style={{ padding: '0.45rem 0.75rem', fontSize: '0.9rem' }}
+          title="Keyboard Shortcuts (?)"
+        >
+          ⌨️
+        </button>
         <button onClick={handleLogout} className="btn-secondary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
           Logout
         </button>
       </div>
+
+      <ShortcutModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </nav>
   );
 };
 
 export default Navbar;
-
