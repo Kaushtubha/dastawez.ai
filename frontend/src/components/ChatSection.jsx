@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { documentService } from '../services/historyService';
+import { useToast } from '../context/ToastContext';
 
 const ChatSection = ({ initialDocId = null }) => {
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState(initialDocId);
   const [messages, setMessages] = useState([
     {
+      id: 'init-1',
       role: 'assistant',
       content: 'Hello! I am your Dastawez.ai document intelligence assistant. Ask me anything about your uploaded documents or choose a document above to ground my answers.',
       confidence: 1.0,
-      sources: []
+      sources: [],
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [inputQuery, setInputQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
   const messagesEndRef = useRef(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     documentService.getDocuments()
@@ -31,33 +36,51 @@ const ChatSection = ({ initialDocId = null }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleCopy = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    if (showToast) {
+      showToast('Copied answer to clipboard!', 'success', 2000);
+    }
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
   const handleSend = async (queryText = inputQuery) => {
     const q = queryText.trim();
     if (!q || loading) return;
 
+    const userMsg = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: q,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
     setInputQuery('');
-    setMessages((prev) => [...prev, { role: 'user', content: q }]);
+    setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
     try {
       const response = await documentService.askQuestion(q, selectedDocId);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: response.answer,
-          confidence: response.confidence,
-          sources: response.sources || []
-        }
-      ]);
+      const assistantMsg = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response.answer,
+        confidence: response.confidence,
+        sources: response.sources || [],
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
+          id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: 'An error occurred while analyzing the document context. Please verify that documents are uploaded.',
           confidence: 0.1,
-          sources: []
+          sources: [],
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
     } finally {
@@ -165,15 +188,16 @@ const ChatSection = ({ initialDocId = null }) => {
 
       {/* Messages Thread */}
       <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-        {messages.map((m, idx) => (
+        {messages.map((m) => (
           <div
-            key={idx}
+            key={m.id || m.content.substring(0, 10)}
             style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '82%',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.4rem'
+              gap: '0.4rem',
+              position: 'relative'
             }}
           >
             <div
@@ -192,6 +216,39 @@ const ChatSection = ({ initialDocId = null }) => {
               }}
             >
               {m.content}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: m.role === 'user' ? 'flex-end' : 'flex-between',
+              gap: '0.8rem',
+              fontSize: '0.75rem',
+              color: 'var(--text-dim)',
+              padding: '0 0.4rem'
+            }}>
+              <span>{m.timestamp}</span>
+
+              {m.role === 'assistant' && (
+                <button
+                  onClick={() => handleCopy(m.content, m.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: copiedId === m.id ? '#34d399' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Copy response text"
+                >
+                  {copiedId === m.id ? '✓ Copied' : '📋 Copy'}
+                </button>
+              )}
             </div>
 
             {m.role === 'assistant' && (
@@ -260,4 +317,3 @@ const ChatSection = ({ initialDocId = null }) => {
 };
 
 export default ChatSection;
-
