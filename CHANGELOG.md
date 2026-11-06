@@ -5,6 +5,25 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-06
+
+### Added
+- **Automated Document Executive Summaries**: Added `GET /api/v1/documents/{id}/summary` generating high-level briefs, structural composition summaries, and keyword highlights.
+- **Batch Document Deletion**: Implemented `POST /api/v1/documents/batch-delete` for atomic multi-document purge of database records, vector partitions, and filesystem storage.
+- **Storage Telemetry & Health Metrics**: Added `GET /api/v1/system/telemetry` tracking upload directory sizes, SQLite disk footprint, chunk counts, and system catalog statistics.
+- **Performance Telemetry Middleware**: Injected `X-Process-Time` HTTP response header measuring microsecond request pipeline latency.
+- **Global Standardized Exception Handlers**: Registered FastAPI error interceptors providing uniform error payloads with code, message, and diagnostic details.
+- **Interactive Document Chunk Inspector Modal**: Created `DocumentModal.jsx` for deep inspection of individual text chunks, classifications, and page coordinates.
+- **Glassmorphic Confirmation Modal**: Created `ConfirmModal.jsx` replacing native browser confirm prompts with styled glass dialogs.
+- **Format Filter Pills & Sorting Controls**: Enriched `HistoryPage.jsx` with instant category pills (`ALL`, `PDF`, `DOCX`, `TXT`) and multi-factor sorting (date, name, size, element count).
+- **Multi-Stage Ingestion Telemetry**: Enhanced `UploadSection.jsx` with active stage stepper (Verification, Layout Parsing, Semantic Chunking, Vector Sync).
+- **Conversation JSON Export & Copy Controls**: Added instant thread export, clipboard copy with feedback toasts, and session reset controls in `ChatSection.jsx`.
+- **Global Hotkey Navigation System**: Implemented `useKeyboardShortcuts.js` and `ShortcutModal.jsx` (`?`, `Ctrl+D`, `Ctrl+H`, `Ctrl+Q`, `Ctrl+P`, `Esc`).
+- **Ambient Accent Theme Switcher**: Introduced `ThemeContext.jsx` with real-time accent color switches (`Cosmic Purple`, `Cyber Cyan`, `Matrix Emerald`).
+- **Automated Test Suite Expansion**: Added `tests/test_advanced_api.py` validating executive brief synthesis and batch removal endpoints (11 passed).
+
+---
+
 ## [1.1.0] - 2026-11-06
 
 ### Added

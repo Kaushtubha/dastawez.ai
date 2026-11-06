@@ -35,7 +35,11 @@
 - ✅ **Source Attribution**: Direct references to source documents
 
 ### 🎨 Modern UI/UX
-- ✅ **Dark Theme**: Professional dark mode with stunning gradient backgrounds
+- ✅ **Dark Theme & Accent Switcher**: Cosmic Purple, Cyber Cyan, and Matrix Emerald themes
+- ✅ **Global Keyboard Shortcuts**: Fast navigation with Ctrl+D, Ctrl+H, Ctrl+Q, and cheat-sheet modal (?)
+- ✅ **Document & Chunk Inspector Modal**: Deep-dive into raw layout elements and chunk tokens
+- ✅ **Interactive Confirmation Dialogs**: Custom glassmorphic confirmation modals replacing browser alerts
+- ✅ **Multi-Stage Ingestion Telemetry**: Real-time pipeline progress (Verification, Layout OCR, Semantic Chunking, Vector Sync)
 - ✅ **Smooth Animations**: Polished transitions and hover effects
 - ✅ **Fully Responsive**: Optimized for desktop, tablet, and mobile devices
 - ✅ **Modern Dashboard**: Intuitive navigation and professional layout
