@@ -1,8 +1,9 @@
 import os
 import time
+import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -79,6 +80,34 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.perf_counter() - start_time
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
     return response
+
+# Standardized Error Response Exception Handlers
+logger = logging.getLogger("dastawez.api")
+
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+            "detail": exc.detail,
+            "status_code": exc.status_code
+        }
+    )
+
+@app.exception_handler(Exception)
+async def custom_unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled system exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": True,
+            "message": "An unexpected server error occurred during request processing.",
+            "detail": str(exc) if settings.DEBUG else "Internal server error",
+            "status_code": 500
+        }
+    )
 
 # Include API Router
 app.include_router(api_router)
