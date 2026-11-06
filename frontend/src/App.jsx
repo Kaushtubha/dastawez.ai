@@ -6,6 +6,7 @@ import CustomCursor from './components/CustomCursor';
 import ScrollProgress from './components/ScrollProgress';
 import FloatingParticles from './components/FloatingParticles';
 import Toast from './components/Toast';
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -24,6 +25,8 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function AppRoutes() {
+  useKeyboardShortcuts();
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
