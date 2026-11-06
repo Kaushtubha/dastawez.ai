@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -197,3 +198,42 @@ def remove_document(id: int, db: Session = Depends(get_db)):
 
     success = delete_document(db, id)
     return {"success": success, "message": f"Document {id} deleted successfully"}
+
+
+class BatchDeleteRequest(BaseModel):
+    document_ids: List[int] = Field(
+        ...,
+        min_length=1,
+        description="Array of document IDs to batch remove."
+    )
+
+
+@router.post("/documents/batch-delete", summary="Batch Delete Documents and Chunks")
+def batch_remove_documents(req: BatchDeleteRequest, db: Session = Depends(get_db)):
+    """
+    Deletes multiple documents, their associated vector chunks, and filesystem assets in batch.
+    """
+    deleted_ids = []
+    not_found_ids = []
+
+    for doc_id in req.document_ids:
+        doc = get_document_by_id(db, doc_id)
+        if not doc:
+            not_found_ids.append(doc_id)
+            continue
+        if doc.file_path and os.path.exists(doc.file_path):
+            try:
+                os.remove(doc.file_path)
+            except Exception:
+                pass
+        delete_document(db, doc_id)
+        deleted_ids.append(doc_id)
+
+    return {
+        "success": True,
+        "deleted_count": len(deleted_ids),
+        "deleted_ids": deleted_ids,
+        "not_found_ids": not_found_ids,
+        "message": f"Successfully deleted {len(deleted_ids)} documents."
+    }
+
