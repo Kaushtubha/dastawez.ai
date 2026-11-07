@@ -90,6 +90,10 @@ class Chunk(Base):
         }
 
 
+# Model alias for enterprise telemetry
+DocumentChunk = Chunk
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -231,3 +235,8 @@ def create_user(db: Session, username: str, email: str, hashed_password: str) ->
     db.commit()
     db.refresh(user)
     return user
+
+
+# Auto-initialize database tables and schema migrations on module import
+init_db()
+
