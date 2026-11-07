@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import MatrixBackground from '../components/MatrixBackground';
 import DocumentModal from '../components/DocumentModal';
 import ConfirmModal from '../components/ConfirmModal';
+import ExecutiveSummaryModal from '../components/ExecutiveSummaryModal';
 import { documentService } from '../services/historyService';
 
 const HighlightText = ({ text, highlight }) => {
@@ -44,6 +45,7 @@ const HistoryPage = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, id: null, filename: '' });
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [summaryModal, setSummaryModal] = useState({ isOpen: false, id: null, filename: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -379,6 +381,14 @@ const HistoryPage = () => {
                         <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                             <button
+                              onClick={() => setSummaryModal({ isOpen: true, id: doc.id, filename: doc.filename })}
+                              className="btn-secondary"
+                              style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', color: 'var(--accent-pink)' }}
+                              title="Synthesize AI Executive Summary"
+                            >
+                              ✨ Brief
+                            </button>
+                            <button
                               onClick={() => setSelectedDoc(doc)}
                               className="btn-secondary"
                               style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }}
@@ -437,6 +447,14 @@ const HistoryPage = () => {
           confirmVariant="danger"
           onConfirm={handleExecuteBatchDelete}
           onCancel={() => setBatchConfirmOpen(false)}
+        />
+
+        {/* Executive Summary Brief Modal */}
+        <ExecutiveSummaryModal
+          docId={summaryModal.id}
+          filename={summaryModal.filename}
+          isOpen={summaryModal.isOpen}
+          onClose={() => setSummaryModal({ isOpen: false, id: null, filename: '' })}
         />
       </main>
     </div>
