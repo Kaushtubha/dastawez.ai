@@ -17,7 +17,10 @@
 ## ✨ Features
 
 ### 📄 Document Processing
-- ✅ **Multi-Format Support**: Upload PDF, DOCX, and TXT files
+- ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, and Markdown (MD) files
+- ✅ **Cryptographic Deduplication**: Instant cache hit detection via SHA-256 fingerprinting
+- ✅ **Sliding Word-Overlap Chunking**: Context-preserving token boundaries across chunk windows
+- ✅ **CLI & Maintenance Utilities**: Headless CLI ingestion and SQLite database defragmenter
 - ✅ **Smart Parsing**: Automatic document parsing and content extraction
 - ✅ **Intelligent Chunking**: Advanced document segmentation for optimal analysis
 - ✅ **Statistical Analysis**: Comprehensive document metrics and insights

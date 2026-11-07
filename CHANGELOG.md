@@ -5,6 +5,29 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-07
+
+### Added
+- **Native Markdown Parser**: Added full AST-aware Markdown (`.md`) ingestion parsing headers, tables, code blocks, and list items into structured layout elements.
+- **Cryptographic SHA-256 Deduplication**: Added file hash calculation avoiding duplicate parsing and vector index bloating for previously ingested payloads.
+- **Word-Overlap Sliding Chunker**: Enhanced chunker with token boundary sliding overlap (`overlap_words=25`) preserving semantic continuity.
+- **Server-Side Full-Text & Format Search**: Added `GET /api/v1/documents/search` supporting keyword queries across documents and chunk datasets.
+- **Bulk Document ZIP Archive Export**: Implemented `POST /api/v1/documents/export-archive` generating structured ZIP packages with JSON manifests, raw files, and CSV chunks.
+- **Document Reprocessing & Re-indexing**: Added `POST /api/v1/documents/{id}/reindex` to purge chunks and re-parse documents with updated layout parameters.
+- **Token Bucket Rate Limiting**: Injected in-memory sliding window rate limiter middleware with `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers.
+- **Platform Capabilities Endpoint**: Added `GET /api/v1/system/capabilities` exposing vector engines, supported extensions, and feature flags.
+- **Interactive Citation Excerpt Drawers**: Added expandable citation excerpt cards in chat displaying verified excerpts and similarity scores.
+- **Search Highlighting in History**: Integrated real-time keyword highlight markers within the document archive view.
+- **Multi-Select Checkboxes & Batch Deletion**: Added batch selection UI with instant multi-document deletion controls.
+- **Executive AI Brief Modal**: Created `ExecutiveSummaryModal.jsx` for on-demand inspection of document executive briefs and insights.
+- **Standalone CLI Ingestion Tool**: Created `scripts/ingest_cli.py` for headless single-file and directory document ingestion.
+- **Database Maintenance & Vacuum Tool**: Created `scripts/db_maintenance.py` for SQLite PRAGMA checks, orphaned chunk purges, and disk vacuuming.
+- **Automated Architecture Smoke Test**: Created `scripts/smoke_test.py` running automated 7-phase validation across all system modules.
+- **Automatic SQLite Schema Migration**: Added non-destructive schema migrations on boot in `init_db()`.
+- **Test Suite Expansion**: Added unit and integration test coverage (`16 passed`).
+
+---
+
 ## [1.2.0] - 2026-11-06
 
 ### Added
@@ -54,37 +77,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation (README, DEPLOYMENT, CONTRIBUTING)
 - Environment configuration templates
 - Automated setup scripts for Windows and Unix
-
-### Features
-#### Backend
-- FastAPI application with async support
-- SQLite database for metadata storage
-- Document parsing using Unstructured library
-- Text chunking and processing
-- Hybrid vector store implementation (TF-IDF + Qdrant)
-- Authentication endpoints (login, register, logout)
-- Document CRUD operations
-- Q&A endpoint with context retrieval
-- CORS configuration for frontend integration
-
-#### Frontend
-- React 18.2 with Vite build system
-- Modern dark theme with gradient backgrounds
-- Responsive design for all devices
-- Authentication pages (Login, Register)
-- Dashboard with document statistics
-- Upload section with drag-and-drop
-- Analysis section with interactive charts
-- Chat interface for Q&A
-- Document history management
-- User profile page
-- Protected routes with auth guards
-- Context-based state management
-
-#### Infrastructure
-- Docker containerization
-- Docker Compose orchestration
-- Environment variable management
-- Git ignore rules for clean repository
-- Setup automation scripts
-- Production deployment guides
