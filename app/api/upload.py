@@ -154,6 +154,48 @@ def list_documents(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/documents/search", summary="Search Document Catalog and Content")
+def search_documents_catalog(
+    q: Optional[str] = Query(None, description="Search keyword against filename and extracted text"),
+    file_type: Optional[str] = Query(None, description="Optional extension filter (e.g. pdf, docx, txt, md)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Performs server-side filtered search across ingested document catalog and chunk texts.
+    """
+    from app.db.metadata import Document
+    query_builder = db.query(Document)
+
+    if file_type:
+        clean_ext = file_type.lower().strip().lstrip(".")
+        query_builder = query_builder.filter(Document.file_type.ilike(f"%{clean_ext}%"))
+
+    if q and q.strip():
+        term = q.strip()
+        # Find document IDs that match filename or have chunks matching term
+        matching_chunk_doc_ids = [
+            row[0] for row in db.query(Chunk.document_id).filter(Chunk.chunk_text.ilike(f"%{term}%")).distinct().all()
+        ]
+        query_builder = query_builder.filter(
+            (Document.filename.ilike(f"%{term}%")) | (Document.id.in_(matching_chunk_doc_ids))
+        )
+
+    total_count = query_builder.count()
+    matching_docs = query_builder.order_by(Document.id.desc()).offset(offset).limit(limit).all()
+
+    return {
+        "query": q,
+        "file_type_filter": file_type,
+        "total": total_count,
+        "limit": limit,
+        "offset": offset,
+        "documents": [d.to_dict() for d in matching_docs]
+    }
+
+
+
 @router.get("/documents/{id}", summary="Get Single Document Details")
 def get_document_details(id: int, db: Session = Depends(get_db)):
     """Retrieves specific document details and chunk previews."""
