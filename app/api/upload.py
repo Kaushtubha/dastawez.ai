@@ -20,7 +20,8 @@ from app.db.metadata import (
     get_document_by_hash,
     delete_document,
     create_chunk,
-    get_chunks_by_document
+    get_chunks_by_document,
+    Chunk
 )
 from app.ingestion.parser import parse_document
 from app.ingestion.chunker import create_chunks
@@ -270,4 +271,61 @@ def batch_remove_documents(req: BatchDeleteRequest, db: Session = Depends(get_db
         "not_found_ids": not_found_ids,
         "message": f"Successfully deleted {len(deleted_ids)} documents."
     }
+
+
+@router.post("/documents/{id}/reindex", summary="Reprocess and Re-index Document")
+def reindex_document(id: int, db: Session = Depends(get_db)):
+    """
+    Purges existing chunks and re-runs layout extraction and chunking pipeline on the stored document file.
+    """
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    if not doc.file_path or not os.path.exists(doc.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Original document payload not found on disk; cannot re-index."
+        )
+
+    start_time = time.perf_counter()
+    parsed_result = parse_document(doc.file_path, doc.filename)
+    elements = parsed_result.get("elements", [])
+    analysis = parsed_result.get("analysis", {})
+
+    chunks_data = create_chunks(elements, doc.filename)
+
+    # Delete previous chunks
+    db.query(Chunk).filter(Chunk.document_id == id).delete()
+
+    for c in chunks_data:
+        create_chunk(
+            db=db,
+            document_id=id,
+            chunk_text=c["chunk_text"],
+            chunk_metadata_json=c["chunk_metadata_json"]
+        )
+
+    duration_ms = int((time.perf_counter() - start_time) * 1000)
+    meta = doc.to_dict().get("metadata", {})
+    meta["analysis"] = analysis
+    meta["chunks_added"] = len(chunks_data)
+    meta["last_reindexed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    doc.metadata_json = json.dumps(meta)
+    doc.processing_duration_ms = duration_ms
+    doc.status = "processed"
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "success": True,
+        "message": f"Document {id} re-indexed successfully",
+        "document_id": doc.id,
+        "total_elements": len(elements),
+        "chunks_count": len(chunks_data),
+        "processing_duration_ms": duration_ms,
+        "analysis": analysis
+    }
+
 
