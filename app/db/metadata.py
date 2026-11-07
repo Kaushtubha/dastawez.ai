@@ -36,6 +36,9 @@ class Document(Base):
     file_size = Column(Integer, nullable=True)
     upload_date = Column(DateTime, default=datetime.utcnow)
     status = Column(String(50), default="processed")
+    checksum_sha256 = Column(String(64), nullable=True, index=True)
+    processing_duration_ms = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
     metadata_json = Column(Text, nullable=True)
 
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
@@ -55,6 +58,9 @@ class Document(Base):
             "file_size": self.file_size,
             "upload_date": self.upload_date.isoformat() if self.upload_date else None,
             "status": self.status,
+            "checksum_sha256": self.checksum_sha256,
+            "processing_duration_ms": self.processing_duration_ms,
+            "error_message": self.error_message,
             "metadata": meta
         }
 
@@ -64,7 +70,7 @@ class Chunk(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
-    chunk_text = Column(Text, nullable=True)
+    chunk_text = Column(Text, nullable=False)
     chunk_metadata_json = Column(Text, nullable=True)
 
     document = relationship("Document", back_populates="chunks")
@@ -128,13 +134,21 @@ def get_document_by_id(db: Session, doc_id: int) -> Optional[Document]:
     return db.query(Document).filter(Document.id == doc_id).first()
 
 
+def get_document_by_hash(db: Session, checksum_sha256: str) -> Optional[Document]:
+    return db.query(Document).filter(Document.checksum_sha256 == checksum_sha256).first()
+
+
 def create_document(
     db: Session,
     filename: str,
     file_path: str,
     file_type: str,
     file_size: int,
-    metadata_json: Optional[str] = None
+    metadata_json: Optional[str] = None,
+    checksum_sha256: Optional[str] = None,
+    processing_duration_ms: Optional[int] = None,
+    error_message: Optional[str] = None,
+    status: str = "processed"
 ) -> Document:
     doc = Document(
         filename=filename,
@@ -142,7 +156,10 @@ def create_document(
         file_type=file_type,
         file_size=file_size,
         metadata_json=metadata_json,
-        status="processed"
+        checksum_sha256=checksum_sha256,
+        processing_duration_ms=processing_duration_ms,
+        error_message=error_message,
+        status=status
     )
     db.add(doc)
     db.commit()
@@ -199,4 +216,3 @@ def create_user(db: Session, username: str, email: str, hashed_password: str) ->
     db.commit()
     db.refresh(user)
     return user
-
