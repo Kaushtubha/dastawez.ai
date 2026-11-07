@@ -158,7 +158,39 @@ def health_check():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.2.0"
+        "version": "1.3.0"
+    }
+
+@app.get("/api/v1/system/capabilities", tags=["System"])
+def system_capabilities_endpoint():
+    """
+    Exposes platform parsing capabilities, allowed extensions, vector store configuration, and AI model parameters.
+    """
+    from app.db.vector_store import HAS_QDRANT
+    return {
+        "app_name": settings.APP_NAME,
+        "version": "1.3.0",
+        "supported_formats": sorted(list(settings.ALLOWED_EXTENSIONS)),
+        "max_upload_size_bytes": settings.MAX_UPLOAD_SIZE,
+        "max_upload_size_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024),
+        "vector_search": {
+            "primary_engine": "Qdrant Vector DB" if HAS_QDRANT else "Local TF-IDF Vectorizer",
+            "qdrant_connected": HAS_QDRANT,
+            "embedding_model": settings.EMBEDDING_MODEL
+        },
+        "ai_synthesis": {
+            "llm_model": settings.OPENAI_MODEL,
+            "has_openai_key": bool(settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("your-")),
+            "fallback_mode": "Local Grounded Extractive Synthesis"
+        },
+        "features": {
+            "sha256_deduplication": True,
+            "batch_deletion": True,
+            "archive_zip_export": True,
+            "markdown_parser": True,
+            "rate_limiting": True,
+            "executive_summaries": True
+        }
     }
 
 @app.get("/api/v1/system/telemetry", tags=["System"])
