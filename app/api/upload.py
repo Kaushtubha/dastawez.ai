@@ -2,7 +2,9 @@ import os
 import io
 import csv
 import json
+import time
 import shutil
+import hashlib
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Response
@@ -15,6 +17,7 @@ from app.db.metadata import (
     create_document,
     get_documents,
     get_document_by_id,
+    get_document_by_hash,
     delete_document,
     create_chunk,
     get_chunks_by_document
@@ -27,9 +30,11 @@ router = APIRouter()
 @router.post("/upload-docs", summary="Upload & Process Document")
 async def upload_document(
     file: UploadFile = File(...),
+    force_reindex: bool = Query(False, description="Force re-indexing even if identical SHA-256 hash exists"),
     db: Session = Depends(get_db)
 ):
-    """Uploads, parses, segments into chunks, and indexes a document."""
+    """Uploads, hashes (SHA-256), parses, segments into chunks, and indexes a document."""
+    start_time = time.perf_counter()
     filename = file.filename or "uploaded_document.pdf"
     ext = Path(filename).suffix.lower().lstrip(".")
 
@@ -62,6 +67,27 @@ async def upload_document(
             detail=f"File exceeds maximum allowed size ({settings.MAX_UPLOAD_SIZE // (1024*1024)} MB)"
         )
 
+    # Cryptographic SHA-256 Checksum Calculation
+    hasher = hashlib.sha256()
+    with open(destination_path, "rb") as f:
+        while chunk := f.read(65536):
+            hasher.update(chunk)
+    checksum = hasher.hexdigest()
+
+    # Deduplication check
+    existing_doc = get_document_by_hash(db, checksum)
+    if existing_doc and not force_reindex:
+        return {
+            "success": True,
+            "deduplicated": True,
+            "message": "Existing document recognized via SHA-256 fingerprint; returned cached indexing.",
+            "document_id": existing_doc.id,
+            "filename": existing_doc.filename,
+            "file_size": existing_doc.file_size,
+            "checksum_sha256": checksum,
+            "analysis": existing_doc.to_dict().get("metadata", {}).get("analysis", {})
+        }
+
     try:
         parsed_result = parse_document(str(destination_path), filename)
         elements = parsed_result.get("elements", [])
@@ -75,13 +101,18 @@ async def upload_document(
             "analysis": analysis
         }
 
+        processing_duration_ms = int((time.perf_counter() - start_time) * 1000)
+
         db_doc = create_document(
             db=db,
             filename=filename,
             file_path=str(destination_path),
             file_type=f".{ext}",
             file_size=file_size,
-            metadata_json=json.dumps(doc_metadata)
+            metadata_json=json.dumps(doc_metadata),
+            checksum_sha256=checksum,
+            processing_duration_ms=processing_duration_ms,
+            status="processed"
         )
 
         for c in chunks_data:
@@ -94,10 +125,13 @@ async def upload_document(
 
         return {
             "success": True,
+            "deduplicated": False,
             "message": "Document uploaded and analyzed successfully",
             "document_id": db_doc.id,
             "filename": filename,
             "file_size": file_size,
+            "checksum_sha256": checksum,
+            "processing_duration_ms": processing_duration_ms,
             "total_elements": len(elements),
             "chunks_count": len(chunks_data),
             "analysis": analysis
