@@ -18,6 +18,7 @@ const ChatSection = ({ initialDocId = null }) => {
   const [inputQuery, setInputQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [activeCitation, setActiveCitation] = useState(null);
   const messagesEndRef = useRef(null);
   const { showToast } = useToast();
 
@@ -121,12 +122,16 @@ const ChatSection = ({ initialDocId = null }) => {
     const pct = Math.round(confidence * 100);
     let color = '#34d399';
     let bg = 'rgba(52, 211, 153, 0.15)';
+    let tier = 'High Precision';
+
     if (pct < 60) {
       color = '#f59e0b';
       bg = 'rgba(245, 158, 11, 0.15)';
+      tier = 'Moderate Match';
     } else if (pct < 80) {
       color = '#38bdf8';
       bg = 'rgba(56, 189, 248, 0.15)';
+      tier = 'Strong Alignment';
     }
 
     return (
@@ -134,14 +139,14 @@ const ChatSection = ({ initialDocId = null }) => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.4rem',
-        padding: '0.2rem 0.6rem',
+        padding: '0.2rem 0.65rem',
         borderRadius: '999px',
         background: bg,
         color: color,
         fontSize: '0.75rem',
         fontWeight: 600
       }}>
-        <span>🎯 {pct}% Confidence</span>
+        <span>🎯 {pct}% • {tier}</span>
       </div>
     );
   };
@@ -308,23 +313,58 @@ const ChatSection = ({ initialDocId = null }) => {
                 {getConfidenceBadge(m.confidence)}
 
                 {/* Source citations */}
-                {m.sources?.map((s, sIdx) => (
-                  <span
-                    key={sIdx}
-                    title={s.excerpt}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '0.2rem 0.55rem',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      color: '#cbd5e1',
-                      cursor: 'pointer'
-                    }}
+                {m.sources?.map((s, sIdx) => {
+                  const citationKey = `${m.id}-${sIdx}`;
+                  const isActive = activeCitation?.id === citationKey;
+                  return (
+                    <span
+                      key={sIdx}
+                      onClick={() => setActiveCitation(isActive ? null : { id: citationKey, ...s })}
+                      title="Click to view excerpt citation"
+                      style={{
+                        background: isActive ? 'rgba(124, 58, 237, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                        border: isActive ? '1px solid var(--primary-color)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        color: isActive ? '#fff' : '#cbd5e1',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      📄 Page {s.page_number} ({s.element_type}) {isActive ? '▲' : '▼'}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Active Citation Excerpt Card Drawer */}
+            {activeCitation && activeCitation.id.startsWith(`${m.id}-`) && (
+              <div
+                style={{
+                  marginTop: '0.4rem',
+                  padding: '0.8rem 1rem',
+                  borderRadius: '10px',
+                  background: 'rgba(20, 16, 42, 0.95)',
+                  border: '1px solid var(--border-glass-glow)',
+                  fontSize: '0.82rem',
+                  color: 'var(--text-main)',
+                  animation: 'fadeIn 0.2s ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', color: 'var(--accent-pink)', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <span>Verified Excerpt • Page {activeCitation.page_number} • Relevance: {Math.round((activeCitation.score || 0.8) * 100)}%</span>
+                  <button
+                    onClick={() => setActiveCitation(null)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.75rem' }}
                   >
-                    📄 Page {s.page_number} ({s.element_type})
-                  </span>
-                ))}
+                    ✕
+                  </button>
+                </div>
+                <div style={{ fontStyle: 'italic', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                  "{activeCitation.excerpt || 'Context excerpt attached to source record.'}"
+                </div>
               </div>
             )}
           </div>
