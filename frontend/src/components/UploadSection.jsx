@@ -60,8 +60,8 @@ const UploadSection = ({ onUploadSuccess }) => {
 
   const handleFile = async (file) => {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf', 'docx', 'txt'].includes(ext)) {
-      setError(`Format .${ext} is not supported. Please upload PDF, DOCX, or TXT.`);
+    if (!['pdf', 'docx', 'txt', 'md', 'markdown'].includes(ext)) {
+      setError(`Format .${ext} is not supported. Please upload PDF, DOCX, TXT, or MD.`);
       return;
     }
 
@@ -88,7 +88,11 @@ const UploadSection = ({ onUploadSuccess }) => {
       clearInterval(timer);
       setProgress(100);
       setCurrentStage(4);
-      setSuccessMsg(`Document "${file.name}" ingested and vectorized successfully!`);
+      if (result.deduplicated) {
+        setSuccessMsg(`Document "${file.name}" recognized via SHA-256 fingerprint (instant cached index)!`);
+      } else {
+        setSuccessMsg(`Document "${file.name}" ingested and vectorized successfully!`);
+      }
       if (onUploadSuccess) {
         onUploadSuccess(result);
       }
@@ -115,6 +119,7 @@ const UploadSection = ({ onUploadSuccess }) => {
           <span className="badge badge-purple">PDF</span>
           <span className="badge badge-pink">DOCX</span>
           <span className="badge badge-cyan">TXT</span>
+          <span className="badge badge-purple" style={{ borderColor: 'var(--accent-cyan)' }}>MD</span>
         </div>
       </div>
 
@@ -130,7 +135,7 @@ const UploadSection = ({ onUploadSuccess }) => {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.docx,.txt"
+          accept=".pdf,.docx,.txt,.md,.markdown"
           onChange={handleFileChange}
           style={{ display: 'none' }}
           disabled={uploading}
