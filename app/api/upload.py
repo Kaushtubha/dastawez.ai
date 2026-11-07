@@ -5,6 +5,7 @@ import json
 import time
 import shutil
 import hashlib
+import zipfile
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Response
@@ -369,5 +370,74 @@ def reindex_document(id: int, db: Session = Depends(get_db)):
         "processing_duration_ms": duration_ms,
         "analysis": analysis
     }
+
+
+class ExportArchiveRequest(BaseModel):
+    document_ids: List[int] = Field(..., min_length=1, description="List of document IDs to bundle into zip archive")
+    include_raw_files: bool = Field(True, description="Whether to include original uploaded file if available")
+
+
+@router.post("/documents/export-archive", summary="Export Bulk Documents as Zip Archive")
+def export_documents_archive(req: ExportArchiveRequest, db: Session = Depends(get_db)):
+    """
+    Bundles selected documents, their extracted chunk datasets, and original files into a downloadable ZIP archive.
+    """
+    zip_buffer = io.BytesIO()
+    manifest_docs = []
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for doc_id in req.document_ids:
+            doc = get_document_by_id(db, doc_id)
+            if not doc:
+                continue
+
+            chunks = get_chunks_by_document(db, doc_id)
+            folder_prefix = f"doc_{doc.id}_{Path(doc.filename).stem}/"
+
+            # 1. Metadata JSON
+            doc_dict = doc.to_dict()
+            doc_dict["chunks_count"] = len(chunks)
+            zf.writestr(f"{folder_prefix}metadata.json", json.dumps(doc_dict, indent=2))
+
+            # 2. Chunks CSV
+            csv_out = io.StringIO()
+            writer = csv.writer(csv_out)
+            writer.writerow(["Chunk_ID", "Document_ID", "Page_Number", "Element_Type", "Chunk_Text"])
+            for c in chunks:
+                c_meta = json.loads(c.chunk_metadata_json) if c.chunk_metadata_json else {}
+                writer.writerow([
+                    c.id,
+                    doc.id,
+                    c_meta.get("page_number", 1),
+                    c_meta.get("element_type", "Text"),
+                    (c.chunk_text or "").replace("\n", " ")
+                ])
+            zf.writestr(f"{folder_prefix}chunks.csv", csv_out.getvalue())
+
+            # 3. Raw file payload if requested
+            if req.include_raw_files and doc.file_path and os.path.exists(doc.file_path):
+                zf.write(doc.file_path, arcname=f"{folder_prefix}original_{doc.filename}")
+
+            manifest_docs.append({
+                "id": doc.id,
+                "filename": doc.filename,
+                "chunks_count": len(chunks)
+            })
+
+        # Manifest
+        manifest = {
+            "archive_generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "total_documents": len(manifest_docs),
+            "documents": manifest_docs
+        }
+        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+
+    zip_buffer.seek(0)
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=dastawez_export_archive.zip"}
+    )
+
 
 
