@@ -22,7 +22,7 @@ class VectorStore:
     Hybrid Vector Store:
     - Provides high-performance local vector similarity search via Scikit-Learn TF-IDF.
     - Synchronizes with Qdrant Vector DB when available.
-    - Supports OpenAI dense embeddings when API key is provided.
+    - Supports cosine similarity ranking and dynamic confidence thresholds.
     """
 
     def __init__(self):
@@ -35,7 +35,6 @@ class VectorStore:
             return
         try:
             client = QdrantClient(url=settings.QDRANT_URL, timeout=2.0)
-            # Test connection
             client.get_collections()
             self.qdrant_client = client
             logger.info("Connected to Qdrant at %s", settings.QDRANT_URL)
@@ -47,16 +46,17 @@ class VectorStore:
         self,
         query: str,
         chunks: List[Dict[str, Any]],
-        top_k: int = 5
+        top_k: int = 5,
+        min_threshold: float = 0.0
     ) -> List[Dict[str, Any]]:
         """
         Performs semantic vector search across chunks for a given query.
-        Returns top_k most relevant chunks with similarity score.
+        Returns top_k most relevant chunks with cosine similarity score.
         """
         if not chunks:
             return []
 
-        # If only a few chunks, return them all with default scores
+        # If only a few chunks, return them all with normalized default scores
         if len(chunks) <= top_k:
             results = []
             for c in chunks:
@@ -66,7 +66,7 @@ class VectorStore:
             return results
 
         texts = [c.get("chunk_text", "") for c in chunks]
-        
+
         try:
             # Build TF-IDF vector space with word and n-gram overlap
             vectorizer = TfidfVectorizer(
@@ -76,13 +76,13 @@ class VectorStore:
             )
             tfidf_matrix = vectorizer.fit_transform(texts)
             query_vec = vectorizer.transform([query])
-            
+
             # Compute cosine similarity
             sims = cosine_similarity(query_vec, tfidf_matrix).flatten()
-            
+
             # Get top indices
             top_indices = np.argsort(sims)[::-1][:top_k]
-            
+
             results = []
             for idx in top_indices:
                 score = float(sims[idx])
@@ -92,11 +92,13 @@ class VectorStore:
                     chunk_words = set(texts[idx].lower().split())
                     overlap = len(query_words.intersection(chunk_words))
                     score = min(0.6, 0.2 + (overlap * 0.1))
-                
-                chunk_copy = dict(chunks[idx])
-                chunk_copy["score"] = round(score, 4)
-                results.append(chunk_copy)
-                
+
+                score = round(min(1.0, max(0.0, score)), 4)
+                if score >= min_threshold:
+                    chunk_copy = dict(chunks[idx])
+                    chunk_copy["score"] = score
+                    results.append(chunk_copy)
+
             return results
         except Exception as e:
             logger.error("Error during vector similarity search: %s", e)
@@ -114,4 +116,3 @@ class VectorStore:
 
 
 vector_store = VectorStore()
-
