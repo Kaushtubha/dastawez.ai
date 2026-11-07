@@ -6,6 +6,34 @@ import DocumentModal from '../components/DocumentModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { documentService } from '../services/historyService';
 
+const HighlightText = ({ text, highlight }) => {
+  if (!highlight || !highlight.trim()) return <span>{text}</span>;
+  const regex = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark
+            key={i}
+            style={{
+              background: 'rgba(240, 147, 251, 0.35)',
+              color: '#fff',
+              padding: '0 2px',
+              borderRadius: '3px',
+              textShadow: '0 0 8px rgba(240, 147, 251, 0.8)'
+            }}
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+};
+
 const HistoryPage = () => {
   const [documents, setDocuments] = useState([]);
   const [search, setSearch] = useState('');
@@ -37,6 +65,7 @@ const HistoryPage = () => {
     const name = (doc.filename || '').toLowerCase();
     if (t.includes('pdf') || name.endsWith('.pdf')) return 'PDF';
     if (t.includes('docx') || t.includes('word') || name.endsWith('.docx') || name.endsWith('.doc')) return 'DOCX';
+    if (t.includes('md') || name.endsWith('.md') || name.endsWith('.markdown')) return 'MD';
     if (t.includes('txt') || t.includes('text') || name.endsWith('.txt')) return 'TXT';
     return 'OTHER';
   };
@@ -97,7 +126,8 @@ const HistoryPage = () => {
     ALL: documents.length,
     PDF: documents.filter((d) => getNormalizedType(d) === 'PDF').length,
     DOCX: documents.filter((d) => getNormalizedType(d) === 'DOCX').length,
-    TXT: documents.filter((d) => getNormalizedType(d) === 'TXT').length
+    TXT: documents.filter((d) => getNormalizedType(d) === 'TXT').length,
+    MD: documents.filter((d) => getNormalizedType(d) === 'MD').length
   };
 
   return (
@@ -145,7 +175,7 @@ const HistoryPage = () => {
             {/* Format Pills */}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginRight: '0.2rem' }}>Format:</span>
-              {['ALL', 'PDF', 'DOCX', 'TXT'].map((fmt) => (
+              {['ALL', 'PDF', 'DOCX', 'TXT', 'MD'].map((fmt) => (
                 <button
                   key={fmt}
                   onClick={() => setFormatFilter(fmt)}
@@ -233,7 +263,7 @@ const HistoryPage = () => {
                           title="Click to inspect metadata and chunks"
                         >
                           <span style={{ textDecoration: 'underline', textDecorationColor: 'rgba(255, 255, 255, 0.2)' }}>
-                            {doc.filename}
+                            <HighlightText text={doc.filename} highlight={search} />
                           </span>
                         </td>
                         <td style={{ padding: '1rem 1.5rem' }}>
