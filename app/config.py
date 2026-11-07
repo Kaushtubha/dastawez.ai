@@ -32,7 +32,7 @@ class Settings:
     # File Uploads
     MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024))) # 50 MB
     UPLOAD_FOLDER: Path = BASE_DIR / os.getenv("UPLOAD_FOLDER", "uploads")
-    ALLOWED_EXTENSIONS: set = {"pdf", "docx", "txt"}
+    ALLOWED_EXTENSIONS: set = {"pdf", "docx", "txt", "md"}
     
     # CORS
     CORS_ORIGINS: list = [
@@ -48,4 +48,3 @@ class Settings:
         (BASE_DIR / "app" / "static").mkdir(parents=True, exist_ok=True)
 
 settings = Settings()
-

@@ -51,7 +51,7 @@ class ParsedElement:
 
 
 class DocumentParser:
-    """Multi-format Document Parser supporting PDF, DOCX, and TXT with layout intelligence."""
+    """Multi-format Document Parser supporting PDF, DOCX, TXT, and Markdown with layout intelligence."""
 
     def parse(self, file_path: str, filename: str) -> Dict[str, Any]:
         ext = Path(filename).suffix.lower()
@@ -59,6 +59,8 @@ class DocumentParser:
             elements, total_pages = self._parse_pdf(file_path, filename)
         elif ext in (".docx", ".doc"):
             elements, total_pages = self._parse_docx(file_path)
+        elif ext in (".md", ".markdown"):
+            elements, total_pages = self._parse_markdown(file_path)
         else:
             elements, total_pages = self._parse_txt(file_path)
 
@@ -78,75 +80,51 @@ class DocumentParser:
             from unstructured.partition.pdf import partition_pdf
             raw_elements = partition_pdf(filename=file_path)
             for el in raw_elements:
-                text = str(el).strip()
-                if not text:
-                    continue
-                type_name = type(el).__name__
-                if "Title" in type_name:
-                    el_type = "Title"
-                elif "Table" in type_name:
-                    el_type = "Table"
-                elif "ListItem" in type_name:
-                    el_type = "ListItem"
-                else:
-                    el_type = "NarrativeText"
-
-                page_num = getattr(el.metadata, "page_number", 1) or 1
-                total_pages = max(total_pages, page_num)
-                elements.append(ParsedElement(text=text, element_type=el_type, page_number=page_num))
-            if elements:
-                return elements, total_pages
+                el_type = type(el).__name__
+                page = getattr(el.metadata, "page_number", 1) or 1
+                total_pages = max(total_pages, page)
+                elements.append(ParsedElement(text=str(el), element_type=el_type, page_number=page))
+            return elements, total_pages
         except Exception as e:
-            logger.info("Unstructured PDF parsing deferred: %s. Using PyPDF engine.", e)
+            logger.info("Unstructured PDF partition unavailable or failed (%s). Falling back to PyPDF.", e)
 
-        # Robust PyPDF parsing
+        # PyPDF Fallback
         try:
             import pypdf
             reader = pypdf.PdfReader(file_path)
             total_pages = len(reader.pages)
-
-            for page_idx, page in enumerate(reader.pages, start=1):
-                page_text = page.extract_text() or ""
-                lines = [line.strip() for line in page_text.splitlines() if line.strip()]
-
-                for y_offset, line in enumerate(lines):
-                    # Element classification heuristics
-                    if len(line) < 60 and (line.isupper() or line.istitle() or line.endswith(":")):
+            for idx, page in enumerate(reader.pages):
+                text = page.extract_text() or ""
+                lines = [line.strip() for line in text.split("\n") if line.strip()]
+                for line in lines:
+                    if len(line) < 60 and line.isupper():
                         el_type = "Title"
-                    elif re.match(r"^(\d+[\.\)]|[-*•])\s+", line):
+                    elif line.startswith(("-", "*", "•")):
                         el_type = "ListItem"
-                    elif "\t" in line or "  " in line and any(char.isdigit() for char in line):
+                    elif "|" in line:
                         el_type = "Table"
                     else:
                         el_type = "NarrativeText"
-
-                    elements.append(
-                        ParsedElement(
-                            text=line,
-                            element_type=el_type,
-                            page_number=page_idx,
-                            coordinates=(100, 100 + (y_offset * 20), 500, 120 + (y_offset * 20))
-                        )
-                    )
+                    elements.append(ParsedElement(text=line, element_type=el_type, page_number=idx + 1))
+            return elements, total_pages
         except Exception as e:
             logger.error("PyPDF parsing failed: %s", e)
-            elements.append(ParsedElement(text="Document content extracted.", element_type="NarrativeText"))
 
-        return elements, max(1, total_pages)
+        # Fallback dummy element if file reading completely fails
+        return [ParsedElement(text="Empty or unreadable document content.", element_type="NarrativeText")], 1
 
     def _parse_docx(self, file_path: str) -> Tuple[List[ParsedElement], int]:
         elements: List[ParsedElement] = []
         try:
             import docx
             doc = docx.Document(file_path)
-            page_estimate = 1
+            total_paragraphs = len(doc.paragraphs)
+            page_estimate = max(1, total_paragraphs // 15)
 
-            for p_idx, p in enumerate(doc.paragraphs):
+            for idx, p in enumerate(doc.paragraphs):
                 text = p.text.strip()
                 if not text:
                     continue
-                if p_idx > 0 and p_idx % 25 == 0:
-                    page_estimate += 1
 
                 if p.style and "heading" in p.style.name.lower():
                     el_type = "Title"
@@ -197,6 +175,90 @@ class DocumentParser:
             elements.append(ParsedElement(text=para, element_type=el_type, page_number=page_num))
 
         return elements, total_pages
+
+    def _parse_markdown(self, file_path: str) -> Tuple[List[ParsedElement], int]:
+        """Parses Markdown files preserving header hierarchy, lists, tables, and code blocks."""
+        elements: List[ParsedElement] = []
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+
+        page_estimate = max(1, len(lines) // 35)
+        in_code_block = False
+        code_lines = []
+
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            page_num = max(1, (idx // 35) + 1)
+
+            if stripped.startswith("```"):
+                if in_code_block:
+                    in_code_block = False
+                    elements.append(
+                        ParsedElement(
+                            text="\n".join(code_lines),
+                            element_type="CodeBlock",
+                            page_number=page_num
+                        )
+                    )
+                    code_lines = []
+                else:
+                    in_code_block = True
+                continue
+
+            if in_code_block:
+                code_lines.append(line.rstrip())
+                continue
+
+            if stripped.startswith("#"):
+                header_text = stripped.lstrip("#").strip()
+                elements.append(
+                    ParsedElement(
+                        text=header_text,
+                        element_type="Title",
+                        page_number=page_num
+                    )
+                )
+            elif stripped.startswith("|") and stripped.endswith("|"):
+                elements.append(
+                    ParsedElement(
+                        text=stripped,
+                        element_type="Table",
+                        page_number=page_num
+                    )
+                )
+            elif any(stripped.startswith(b) for b in ("- ", "* ", "+ ")) or re.match(r"^\d+\.\s+", stripped):
+                elements.append(
+                    ParsedElement(
+                        text=stripped,
+                        element_type="ListItem",
+                        page_number=page_num
+                    )
+                )
+            else:
+                elements.append(
+                    ParsedElement(
+                        text=stripped,
+                        element_type="NarrativeText",
+                        page_number=page_num
+                    )
+                )
+
+        if code_lines:
+            elements.append(
+                ParsedElement(
+                    text="\n".join(code_lines),
+                    element_type="CodeBlock",
+                    page_number=page_estimate
+                )
+            )
+
+        if not elements:
+            elements = [ParsedElement(text="Empty markdown document.", element_type="NarrativeText")]
+
+        return elements, page_estimate
 
     def _generate_analysis(
         self,
@@ -249,4 +311,3 @@ class DocumentParser:
 def parse_document(file_path: str, filename: str) -> Dict[str, Any]:
     parser = DocumentParser()
     return parser.parse(file_path, filename)
-
