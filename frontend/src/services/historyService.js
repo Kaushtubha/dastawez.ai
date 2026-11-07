@@ -48,6 +48,20 @@ export const documentService = {
   getDocumentStats: async (id) => {
     const res = await api.get(`/stats/${id}`);
     return res.data;
+  },
+
+  batchDeleteDocuments: async (documentIds) => {
+    const res = await api.post('/documents/batch-delete', { document_ids: documentIds });
+    return res.data;
+  },
+
+  reindexDocument: async (id) => {
+    const res = await api.post(`/documents/${id}/reindex`);
+    return res.data;
+  },
+
+  getDocumentSummary: async (id) => {
+    const res = await api.get(`/documents/${id}/summary`);
+    return res.data;
   }
 };
-

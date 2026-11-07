@@ -41,7 +41,9 @@ const HistoryPage = () => {
   const [sortBy, setSortBy] = useState('date-desc');
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, id: null, filename: '' });
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,6 +72,23 @@ const HistoryPage = () => {
     return 'OTHER';
   };
 
+  const toggleSelectDoc = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredDocs.length && filteredDocs.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredDocs.map((d) => d.id)));
+    }
+  };
+
   const handleDeletePrompt = (id, filename) => {
     setConfirmDelete({
       isOpen: true,
@@ -84,6 +103,11 @@ const HistoryPage = () => {
     try {
       await documentService.deleteDocument(id);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       if (selectedDoc && selectedDoc.id === id) {
         setSelectedDoc(null);
       }
@@ -91,6 +115,19 @@ const HistoryPage = () => {
       alert('Failed to delete document: ' + (err.response?.data?.detail || err.message));
     } finally {
       setConfirmDelete({ isOpen: false, id: null, filename: '' });
+    }
+  };
+
+  const handleExecuteBatchDelete = async () => {
+    try {
+      const ids = Array.from(selectedIds);
+      await documentService.batchDeleteDocuments(ids);
+      setDocuments((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert('Batch delete failed: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setBatchConfirmOpen(false);
     }
   };
 
@@ -155,7 +192,7 @@ const HistoryPage = () => {
         </div>
 
         {/* Search, Filter Pills & Sort Controls */}
-        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.8rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <span style={{ fontSize: '1.2rem' }}>🔍</span>
             <input
@@ -215,13 +252,64 @@ const HistoryPage = () => {
           </div>
         </div>
 
+        {/* Batch Action Toolbar */}
+        {selectedIds.size > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.8rem 1.4rem',
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              marginBottom: '1.2rem',
+              animation: 'fadeIn 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontWeight: 600, color: '#fca5a5', fontSize: '0.9rem' }}>
+                ✓ {selectedIds.size} document{selectedIds.size > 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="btn-secondary"
+                style={{ padding: '0.35rem 0.8rem', fontSize: '0.82rem' }}
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={() => setBatchConfirmOpen(true)}
+                className="btn-primary"
+                style={{
+                  padding: '0.35rem 1rem',
+                  fontSize: '0.82rem',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                }}
+              >
+                🗑️ Delete Selected ({selectedIds.size})
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Document Table */}
         <div className="glass-panel" style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.92rem' }}>
               <thead>
                 <tr style={{ background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid var(--border-glass)' }}>
-                  <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontWeight: 600 }}># ID</th>
+                  <th style={{ padding: '1rem 1rem', width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size > 0 && selectedIds.size === filteredDocs.length}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
+                  <th style={{ padding: '1rem 1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}># ID</th>
                   <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Document Name</th>
                   <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Type</th>
                   <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Size</th>
@@ -233,7 +321,7 @@ const HistoryPage = () => {
               <tbody>
                 {filteredDocs.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                       {loading ? 'Loading document records...' : 'No documents matching your search criteria.'}
                     </td>
                   </tr>
@@ -241,15 +329,25 @@ const HistoryPage = () => {
                   filteredDocs.map((doc) => {
                     const elementsCount = doc.metadata?.analysis?.total_elements || 0;
                     const pagesCount = doc.metadata?.analysis?.total_pages || 1;
+                    const isSelected = selectedIds.has(doc.id);
                     return (
                       <tr
                         key={doc.id}
                         style={{
                           borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                          background: isSelected ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
                           transition: 'background 0.2s ease'
                         }}
                       >
-                        <td style={{ padding: '1rem 1.5rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                        <td style={{ padding: '1rem 1rem', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectDoc(doc.id)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td style={{ padding: '1rem 1.2rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
                           #{doc.id}
                         </td>
                         <td
@@ -319,7 +417,7 @@ const HistoryPage = () => {
           <DocumentModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
         )}
 
-        {/* Delete Confirmation Modal */}
+        {/* Delete Single Confirmation Modal */}
         <ConfirmModal
           isOpen={confirmDelete.isOpen}
           title="Delete Ingested Document"
@@ -328,6 +426,17 @@ const HistoryPage = () => {
           confirmVariant="danger"
           onConfirm={handleExecuteDelete}
           onCancel={() => setConfirmDelete({ isOpen: false, id: null, filename: '' })}
+        />
+
+        {/* Batch Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={batchConfirmOpen}
+          title={`Batch Delete (${selectedIds.size}) Documents`}
+          message={`Are you sure you want to permanently delete ${selectedIds.size} selected documents? All corresponding chunks and vector indexes will be removed immediately.`}
+          confirmText={`Delete ${selectedIds.size} Documents`}
+          confirmVariant="danger"
+          onConfirm={handleExecuteBatchDelete}
+          onCancel={() => setBatchConfirmOpen(false)}
         />
       </main>
     </div>
