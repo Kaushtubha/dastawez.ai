@@ -111,8 +111,23 @@ class User(Base):
 
 
 def init_db():
-    """Initializes tables in the database."""
+    """Initializes tables in the database and applies non-destructive schema migrations."""
     Base.metadata.create_all(bind=engine)
+    try:
+        with engine.connect() as conn:
+            cursor = conn.connection.cursor()
+            cursor.execute("PRAGMA table_info(documents);")
+            columns = [row[1] for row in cursor.fetchall()]
+
+            if "checksum_sha256" not in columns:
+                cursor.execute("ALTER TABLE documents ADD COLUMN checksum_sha256 VARCHAR(64);")
+            if "processing_duration_ms" not in columns:
+                cursor.execute("ALTER TABLE documents ADD COLUMN processing_duration_ms INTEGER;")
+            if "error_message" not in columns:
+                cursor.execute("ALTER TABLE documents ADD COLUMN error_message TEXT;")
+            conn.connection.commit()
+    except Exception as e:
+        print(f"Schema migration note: {e}")
     print("Database tables initialized successfully.")
 
 
