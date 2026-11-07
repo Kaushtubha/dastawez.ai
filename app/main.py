@@ -81,6 +81,44 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
     return response
 
+# In-Memory Token Bucket Rate Limiter
+RATE_LIMIT_MAX = 300  # requests per minute per client IP
+RATE_LIMIT_WINDOW = 60.0  # seconds
+_client_request_history = {}
+
+@app.middleware("http")
+async def rate_limiter_middleware(request: Request, call_next):
+    # Bypass for static assets and documentation
+    path = request.url.path
+    if path.startswith(("/assets", "/docs", "/redoc", "/openapi.json")):
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+
+    # Clean requests older than the sliding window
+    reqs = [t for t in _client_request_history.get(client_ip, []) if now - t < RATE_LIMIT_WINDOW]
+    if len(reqs) >= RATE_LIMIT_MAX:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": True,
+                "message": "Rate limit exceeded. Too many requests. Please wait a moment.",
+                "detail": f"Max {RATE_LIMIT_MAX} requests per minute limit reached.",
+                "status_code": 429
+            },
+            headers={"Retry-After": "60", "X-RateLimit-Limit": str(RATE_LIMIT_MAX), "X-RateLimit-Remaining": "0"}
+        )
+
+    reqs.append(now)
+    _client_request_history[client_ip] = reqs
+
+    response = await call_next(request)
+    remaining = max(0, RATE_LIMIT_MAX - len(reqs))
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX)
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
+    return response
+
 # Standardized Error Response Exception Handlers
 logger = logging.getLogger("dastawez.api")
 
