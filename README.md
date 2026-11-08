@@ -38,6 +38,7 @@
 - ✅ **Source Attribution**: Direct references to source documents
 
 ### 🎨 Modern UI/UX
+- ✅ **Global Spotlight Command Palette**: Instant modal launcher (Ctrl+K / Cmd+K) for fast document search and keyboard navigation
 - ✅ **Dark Theme & Accent Switcher**: Cosmic Purple, Cyber Cyan, and Matrix Emerald themes
 - ✅ **Global Keyboard Shortcuts**: Fast navigation with Ctrl+D, Ctrl+H, Ctrl+Q, and cheat-sheet modal (?)
 - ✅ **Document & Chunk Inspector Modal**: Deep-dive into raw layout elements and chunk tokens

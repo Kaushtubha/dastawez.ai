@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ShortcutModal from './ShortcutModal';
+import SpotlightModal from './SpotlightModal';
 import api from '../services/api';
 
 const Navbar = () => {
@@ -11,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSpotlight, setShowSpotlight] = useState(false);
 
   useEffect(() => {
     api.get('/health')
@@ -57,7 +59,7 @@ const Navbar = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '0.4rem',
-          marginLeft: '1rem',
+          marginLeft: '0.5rem',
           padding: '0.2rem 0.6rem',
           borderRadius: '999px',
           background: isOnline ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)',
@@ -74,6 +76,39 @@ const Navbar = () => {
           }} />
           {isOnline ? 'ENGINE ONLINE' : 'OFFLINE'}
         </div>
+
+        {/* Global Spotlight Search Launcher Pill */}
+        <button
+          onClick={() => setShowSpotlight(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '0.35rem 0.75rem',
+            borderRadius: '8px',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            color: 'var(--text-dim)',
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            marginLeft: '0.5rem',
+            transition: 'all 0.2s ease'
+          }}
+          title="Search documents and commands (Ctrl+K)"
+        >
+          <span>🔍 Quick Search...</span>
+          <kbd style={{
+            fontSize: '0.68rem',
+            padding: '0.12rem 0.38rem',
+            borderRadius: '4px',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            fontFamily: 'monospace',
+            color: 'var(--text-muted)'
+          }}>
+            Ctrl+K
+          </kbd>
+        </button>
       </div>
 
       <div className="nav-links">
@@ -116,6 +151,7 @@ const Navbar = () => {
       </div>
 
       <ShortcutModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <SpotlightModal isOpen={showSpotlight} onClose={() => setShowSpotlight(false)} />
     </nav>
   );
 };

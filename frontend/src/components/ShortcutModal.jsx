@@ -30,6 +30,7 @@ const ShortcutModal = ({ isOpen: controlledIsOpen, onClose: controlledOnClose })
   if (!isOpen) return null;
 
   const shortcuts = [
+    { keys: ['Ctrl / Cmd', 'K'], description: 'Open Spotlight Command & Search Palette' },
     { keys: ['Ctrl / Alt', 'D'], description: 'Navigate to Dashboard' },
     { keys: ['Ctrl / Alt', 'H'], description: 'Open Document Archive & History' },
     { keys: ['Ctrl / Alt', 'Q'], description: 'Open AI Q&A Assistant' },

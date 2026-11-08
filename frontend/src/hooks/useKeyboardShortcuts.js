@@ -15,6 +15,13 @@ export const useKeyboardShortcuts = (customHandlers = {}) => {
         return;
       }
 
+      // Ctrl+K / Cmd+K opens global Spotlight search palette
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('toggle-spotlight-modal'));
+        return;
+      }
+
       // '?' (Shift + /) opens shortcut helper modal when not typing
       if (!isInput && e.key === '?' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();

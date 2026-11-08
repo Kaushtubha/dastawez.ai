@@ -5,6 +5,17 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-09
+
+### Added
+- **Kubernetes-Ready Detailed Health Probes**: Added `GET /api/v1/system/health/detailed` featuring live database roundtrip latency measurement (`db.execute(SELECT 1)`), liveness/readiness probe states, runtime environment diagnostics (Python version, platform OS), and vector store connectivity.
+- **Global Ctrl+K / Cmd+K Spotlight Command Palette**: Created `SpotlightModal.jsx` providing keyboard-first search launcher for instant document lookup, multi-page jumping, quick format filtering, and theme toggling.
+- **Navbar Spotlight Launcher**: Integrated quick search pill in `Navbar.jsx` with keyboard badge and direct modal toggle.
+- **Keyboard Shortcut Expansion**: Updated `useKeyboardShortcuts.js` and `ShortcutModal.jsx` with `Ctrl+K` / `Cmd+K` hotkey binding.
+- **Frontend Distribution Build**: Compiled production assets with full Vite optimizations to `app/static/`.
+
+---
+
 ## [1.3.0] - 2026-11-07
 
 ### Added
@@ -50,30 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-11-06
 
 ### Added
-- **Document Export Utility**: Added `GET /api/v1/documents/{id}/export?format=json|csv` endpoint supporting structural chunk and metadata extraction.
-- **Glassmorphic Toast Notifications**: Created `ToastContext` and `Toast.jsx` for non-intrusive feedback across upload, query, and authentication events.
-- **Shimmer Skeleton Loaders**: Implemented `SkeletonLoader.jsx` with GPU-accelerated CSS shimmer animation for metric cards, charts, and table rows.
-- **Enhanced OpenAPI Documentation**: Enriched Swagger specification with detailed tag taxonomy, contact information, and license metadata.
-- **Automated Test Suite Expansion**: Added unit tests for document export, CSV formatting limits, and input validation guards (`8 passed`).
-
-### Changed
-- **Async Lifespan Architecture**: Migrated from deprecated `@app.on_event("startup")` to modern Starlette `@asynccontextmanager lifespan(app: FastAPI)` pattern.
-- **Request Validation Constraints**: Enhanced `AskRequest` with string boundaries, non-empty whitespace validators, and structured example queries.
-
----
-
-## [1.0.0] - 2024-03-03
-
-### Added
-- **Initial Release** - Complete full-stack document analysis platform
-- FastAPI backend with RESTful API endpoints
-- React frontend with modern dark theme UI
-- Document upload and parsing (PDF, DOCX, TXT)
-- Statistical analysis with Chart.js visualizations
-- AI-powered Q&A system with confidence scoring
-- User authentication and authorization
-- Document history management
-- Docker support with docker-compose
-- Comprehensive documentation (README, DEPLOYMENT, CONTRIBUTING)
-- Environment configuration templates
-- Automated setup scripts for Windows and Unix
+- **Multi-Format Document Ingestion Engine**: Support for unstructured PDF, Microsoft Word (`.docx`), and Plain Text (`.txt`).
+- **Intelligent Spatial Element Extraction**: Extraction of paragraphs, section headings, tables, bullet lists, and spatial bounding boxes.
+- **Vector Search Engine Integration**: Qdrant Vector Database integration with automatic fallback to Scikit-Learn TF-IDF vector retrieval.
+- **OpenAI & Fallback Local Extractive Synthesis**: Grounded question answering pipeline with citation tracking and similarity confidence scoring.
+- **Single Page Application Dashboard**: Interactive React frontend with statistics charts, document library, and AI chat room.
