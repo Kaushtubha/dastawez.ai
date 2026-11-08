@@ -11,7 +11,7 @@ from app.db.metadata import SessionLocal, create_document, create_chunk, delete_
 def test_system_capabilities():
     """Verify system capabilities and feature flags."""
     res = system_capabilities_endpoint()
-    assert res["version"] == "1.3.0"
+    assert res["version"] == "1.3.1"
     assert "md" in res["supported_formats"]
     assert "pdf" in res["supported_formats"]
     assert res["features"]["sha256_deduplication"] is True

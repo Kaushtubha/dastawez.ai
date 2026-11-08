@@ -47,7 +47,7 @@ app = FastAPI(
         "and Conversational Question-Answering platform. It features layout-preserving element "
         "extraction, spatial coordinate retention, hybrid vector search, and grounded citations."
     ),
-    version="1.1.0",
+    version="1.3.1",
     openapi_tags=TAGS_METADATA,
     contact={
         "name": "Dastawez.ai Engineering Support",
@@ -158,7 +158,60 @@ def health_check():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.3.0"
+        "version": "1.3.1"
+    }
+
+@app.get("/api/v1/system/health/detailed", tags=["System"])
+def detailed_health_check():
+    """
+    Kubernetes-ready liveness/readiness probe and runtime diagnostics endpoint.
+    Performs live database connectivity latency check and vector store status probing.
+    """
+    import sys
+    import platform
+    from datetime import datetime, timezone
+    from sqlalchemy import text
+    from app.db.vector_store import HAS_QDRANT
+
+    # Database connectivity probe & latency measurement
+    db_start = time.perf_counter()
+    db_ok = False
+    db_latency_ms = None
+    db_err = None
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        db_latency_ms = round((time.perf_counter() - db_start) * 1000, 2)
+        db_ok = True
+    except Exception as e:
+        db_err = str(e)
+
+    overall_status = "ready" if db_ok else "degraded"
+
+    return {
+        "status": overall_status,
+        "app": settings.APP_NAME,
+        "version": "1.3.1",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "probes": {
+            "liveness": "passing",
+            "readiness": "passing" if db_ok else "failing",
+            "database": {
+                "status": "healthy" if db_ok else "unhealthy",
+                "latency_ms": db_latency_ms,
+                "error": db_err
+            },
+            "vector_store": {
+                "status": "connected" if HAS_QDRANT else "fallback_local",
+                "engine": "Qdrant Vector DB" if HAS_QDRANT else "TF-IDF Vectorizer"
+            }
+        },
+        "system": {
+            "python_version": sys.version.split()[0],
+            "platform": platform.platform(),
+            "environment": settings.APP_ENV
+        }
     }
 
 @app.get("/api/v1/system/capabilities", tags=["System"])
@@ -169,7 +222,7 @@ def system_capabilities_endpoint():
     from app.db.vector_store import HAS_QDRANT
     return {
         "app_name": settings.APP_NAME,
-        "version": "1.3.0",
+        "version": "1.3.1",
         "supported_formats": sorted(list(settings.ALLOWED_EXTENSIONS)),
         "max_upload_size_bytes": settings.MAX_UPLOAD_SIZE,
         "max_upload_size_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024),
@@ -189,7 +242,8 @@ def system_capabilities_endpoint():
             "archive_zip_export": True,
             "markdown_parser": True,
             "rate_limiting": True,
-            "executive_summaries": True
+            "executive_summaries": True,
+            "detailed_health_probe": True
         }
     }
 
@@ -222,7 +276,7 @@ def system_telemetry_endpoint():
         "status": "operational",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.2.0",
+        "version": "1.3.1",
         "storage": {
             "upload_directory": str(upload_dir),
             "upload_size_bytes": upload_bytes,

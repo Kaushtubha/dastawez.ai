@@ -1,5 +1,5 @@
 import pytest
-from app.main import health_check
+from app.main import health_check, detailed_health_check
 from app.api.auth import hash_password, verify_password, create_access_token, decode_access_token
 from app.db.metadata import SessionLocal, get_documents, init_db
 from app.core.agent import ask_question
@@ -9,7 +9,21 @@ def test_health_check_function():
     data = health_check()
     assert data["status"] == "healthy"
     assert "version" in data
-    assert data["version"].startswith("1.")
+    assert data["version"] == "1.3.1"
+
+
+def test_detailed_health_check():
+    """Verify Kubernetes-ready liveness/readiness probe and runtime diagnostics."""
+    data = detailed_health_check()
+    assert data["status"] in ("ready", "degraded")
+    assert data["version"] == "1.3.1"
+    assert "probes" in data
+    assert data["probes"]["liveness"] == "passing"
+    assert "database" in data["probes"]
+    assert "vector_store" in data["probes"]
+    assert "system" in data
+    assert "python_version" in data["system"]
+    assert "platform" in data["system"]
 
 def test_auth_token_mechanisms():
     """Verify password hashing and JWT token encoding/decoding."""
