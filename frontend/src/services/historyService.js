@@ -63,5 +63,41 @@ export const documentService = {
   getDocumentSummary: async (id) => {
     const res = await api.get(`/documents/${id}/summary`);
     return res.data;
+  },
+
+  searchDocuments: async (query, fileType = null, limit = 20) => {
+    const params = { q: query, limit };
+    if (fileType && fileType !== 'ALL') {
+      params.file_type = fileType;
+    }
+    const res = await api.get('/documents/search', { params });
+    return res.data;
+  },
+
+  exportArchive: async (documentIds = [], includeRawFiles = true) => {
+    const res = await api.post('/documents/export-archive', {
+      document_ids: documentIds,
+      include_raw_files: includeRawFiles
+    }, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+
+  getCapabilities: async () => {
+    const res = await api.get('/system/capabilities');
+    return res.data;
+  },
+
+  getTelemetry: async () => {
+    const res = await api.get('/system/telemetry');
+    return res.data;
+  },
+
+  getDetailedHealth: async () => {
+    const res = await api.get('/system/health/detailed');
+    return res.data;
   }
 };
+
+export default documentService;
