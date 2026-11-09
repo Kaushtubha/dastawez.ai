@@ -2,6 +2,189 @@ import React, { useState, useEffect, useRef } from 'react';
 import { documentService } from '../services/historyService';
 import { useToast } from '../context/ToastContext';
 
+const renderInlineMarkdown = (text) => {
+  const parts = [];
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const token = match[0];
+    if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code
+          key={match.index}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '0.85em',
+            color: '#a78bfa'
+          }}
+        >
+          {token.slice(1, -1)}
+        </code>
+      );
+    } else if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(
+        <strong key={match.index} style={{ fontWeight: 700, color: '#f3f4f6' }}>
+          {token.slice(2, -2)}
+        </strong>
+      );
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  return parts.length > 0 ? parts : text;
+};
+
+const FormattedMessage = ({ content, role, onCopyCode }) => {
+  if (role === 'user') {
+    return <span>{content}</span>;
+  }
+
+  const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+  const segments = [];
+  let lastIdx = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    if (match.index > lastIdx) {
+      segments.push({ type: 'text', value: content.substring(lastIdx, match.index) });
+    }
+    segments.push({
+      type: 'code',
+      lang: match[1] || 'text',
+      code: match[2].trimEnd()
+    });
+    lastIdx = codeBlockRegex.lastIndex;
+  }
+  if (lastIdx < content.length) {
+    segments.push({ type: 'text', value: content.substring(lastIdx) });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+      {segments.map((seg, sIdx) => {
+        if (seg.type === 'code') {
+          return (
+            <div
+              key={sIdx}
+              style={{
+                borderRadius: '8px',
+                background: 'rgba(10, 10, 20, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                overflow: 'hidden',
+                margin: '0.4rem 0'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0.35rem 0.8rem',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  fontSize: '0.72rem',
+                  color: 'var(--text-dim)',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seg.lang}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onCopyCode) onCopyCode(seg.code);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem'
+                  }}
+                >
+                  📋 Copy Code
+                </button>
+              </div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '0.8rem 1rem',
+                  overflowX: 'auto',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: '0.84rem',
+                  lineHeight: 1.5,
+                  color: '#e2e8f0'
+                }}
+              >
+                <code>{seg.code}</code>
+              </pre>
+            </div>
+          );
+        }
+
+        const lines = seg.value.split('\n');
+        return (
+          <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {lines.map((line, lIdx) => {
+              const trimmed = line.trim();
+              if (!trimmed) {
+                return <div key={lIdx} style={{ height: '0.4rem' }} />;
+              }
+
+              if (trimmed.startsWith('### ')) {
+                return (
+                  <h4 key={lIdx} style={{ margin: '0.4rem 0 0.2rem', fontSize: '1rem', color: '#f3f4f6' }}>
+                    {renderInlineMarkdown(trimmed.replace('### ', ''))}
+                  </h4>
+                );
+              }
+              if (trimmed.startsWith('## ')) {
+                return (
+                  <h3 key={lIdx} style={{ margin: '0.6rem 0 0.2rem', fontSize: '1.08rem', color: '#f3f4f6' }}>
+                    {renderInlineMarkdown(trimmed.replace('## ', ''))}
+                  </h3>
+                );
+              }
+              if (trimmed.startsWith('# ')) {
+                return (
+                  <h2 key={lIdx} style={{ margin: '0.8rem 0 0.3rem', fontSize: '1.2rem', color: '#f3f4f6' }}>
+                    {renderInlineMarkdown(trimmed.replace('# ', ''))}
+                  </h2>
+                );
+              }
+
+              if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                const bulletText = trimmed.replace(/^[•\-*]\s+/, '');
+                return (
+                  <div key={lIdx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginLeft: '0.3rem' }}>
+                    <span style={{ color: 'var(--primary, #818cf8)', fontSize: '0.8rem', marginTop: '0.2rem' }}>●</span>
+                    <span style={{ flex: 1 }}>{renderInlineMarkdown(bulletText)}</span>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={lIdx} style={{ lineHeight: 1.6 }}>
+                  {renderInlineMarkdown(line)}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const ChatSection = ({ initialDocId = null }) => {
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState(initialDocId);
@@ -268,11 +451,18 @@ const ChatSection = ({ initialDocId = null }) => {
                 color: 'white',
                 lineHeight: 1.6,
                 fontSize: '0.95rem',
-                whiteSpace: 'pre-line',
+                whiteSpace: m.role === 'user' ? 'pre-line' : 'normal',
                 boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
               }}
             >
-              {m.content}
+              <FormattedMessage
+                content={m.content}
+                role={m.role}
+                onCopyCode={(code) => {
+                  navigator.clipboard.writeText(code);
+                  if (showToast) showToast('Code snippet copied to clipboard!', 'success', 2000);
+                }}
+              />
             </div>
 
             <div style={{
