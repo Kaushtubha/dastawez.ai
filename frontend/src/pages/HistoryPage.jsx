@@ -46,6 +46,7 @@ const HistoryPage = () => {
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, id: null, filename: '' });
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [summaryModal, setSummaryModal] = useState({ isOpen: false, id: null, filename: '' });
+  const [exportingZip, setExportingZip] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,6 +134,30 @@ const HistoryPage = () => {
     }
   };
 
+  const handleExportArchive = async (specificIds = null) => {
+    const idsToExport = specificIds || (selectedIds.size > 0 ? Array.from(selectedIds) : filteredDocs.map((d) => d.id));
+    if (idsToExport.length === 0) {
+      alert('No documents available to export.');
+      return;
+    }
+    setExportingZip(true);
+    try {
+      const blob = await documentService.exportArchive(idsToExport, true);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `dastawez_archive_${Date.now()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Archive export failed: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setExportingZip(false);
+    }
+  };
+
   const filteredDocs = documents
     .filter((d) => {
       const matchesSearch = d.filename.toLowerCase().includes(search.toLowerCase());
@@ -188,9 +213,21 @@ const HistoryPage = () => {
             </p>
           </div>
 
-          <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{ padding: '0.75rem 1.4rem' }}>
-            + Upload New Document
-          </button>
+          <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <button
+              onClick={() => handleExportArchive(documents.map((d) => d.id))}
+              disabled={exportingZip || documents.length === 0}
+              className="btn-secondary"
+              style={{ padding: '0.75rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              title="Download full document catalog, manifests, and chunk CSVs as ZIP"
+            >
+              <span>{exportingZip ? '⏳' : '📦'}</span>
+              <span>Export Catalog ZIP</span>
+            </button>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{ padding: '0.75rem 1.4rem' }}>
+              + Upload New Document
+            </button>
+          </div>
         </div>
 
         {/* Search, Filter Pills & Sort Controls */}
@@ -275,6 +312,15 @@ const HistoryPage = () => {
               </span>
             </div>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button
+                onClick={() => handleExportArchive()}
+                disabled={exportingZip}
+                className="btn-secondary"
+                style={{ padding: '0.35rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <span>{exportingZip ? '⏳' : '📦'}</span>
+                <span>{exportingZip ? 'Exporting...' : `Export Selected ZIP (${selectedIds.size})`}</span>
+              </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
                 className="btn-secondary"
