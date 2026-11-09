@@ -20,6 +20,8 @@
 - ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, and Markdown (MD) files
 - ✅ **Cryptographic Deduplication**: Instant cache hit detection via SHA-256 fingerprinting
 - ✅ **Sliding Word-Overlap Chunking**: Context-preserving token boundaries across chunk windows
+- ✅ **Hierarchical Heading Context**: Attaches section headings (Title, Header) to chunks for superior RAG semantic retrieval
+- ✅ **Architecture Benchmarking & Profiler**: Built-in CLI latency and throughput profiler (scripts/benchmark.py)
 - ✅ **CLI & Maintenance Utilities**: Headless CLI ingestion and SQLite database defragmenter
 - ✅ **Smart Parsing**: Automatic document parsing and content extraction
 - ✅ **Intelligent Chunking**: Advanced document segmentation for optimal analysis
@@ -39,6 +41,8 @@
 
 ### 🎨 Modern UI/UX
 - ✅ **Global Spotlight Command Palette**: Instant modal launcher (Ctrl+K / Cmd+K) for fast document search and keyboard navigation
+- ✅ **Formatted Markdown & Copyable Code**: Render structured lists, code blocks, and 1-click snippet copy in AI Chat
+- ✅ **Bulk ZIP Archive Export**: Export selected documents, JSON manifests, and CSV chunks from History
 - ✅ **Dark Theme & Accent Switcher**: Cosmic Purple, Cyber Cyan, and Matrix Emerald themes
 - ✅ **Global Keyboard Shortcuts**: Fast navigation with Ctrl+D, Ctrl+H, Ctrl+Q, and cheat-sheet modal (?)
 - ✅ **Document & Chunk Inspector Modal**: Deep-dive into raw layout elements and chunk tokens

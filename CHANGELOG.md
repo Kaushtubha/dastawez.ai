@@ -5,6 +5,19 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-11-09
+
+### Added
+- **Cluster & Storage Telemetry Dashboard**: Enhanced `ProfilePage.jsx` with real-time server upload storage utilization, SQLite database footprint, active vector engine capabilities, DB ping latency metrics, and dynamic telemetry refresh.
+- **Bulk ZIP Archive Export in Management Toolbar**: Added one-click "Export Selected ZIP" in the batch action toolbar and "Export Catalog ZIP" in `HistoryPage.jsx` with automatic download of structured archive packages.
+- **Markdown & Syntax-Highlighted Code Blocks in AI Chat**: Integrated custom markdown formatting for assistant responses in `ChatSection.jsx`, including headers, bullet points, inline code badges, and copyable code blocks with 1-click clipboard button.
+- **Hierarchical Heading Context Chunker**: Enhanced `DocumentChunker` in `app/ingestion/chunker.py` to capture section headers (`Title`, `Header`, `Subheader`), attach semantic section breadcrumbs to chunks, and compute statistical chunk metrics (`compute_chunk_metrics`).
+- **Pipeline Benchmarking & Profiler Tool**: Added `scripts/benchmark.py` CLI utility for profiling document chunking throughput, cryptographic SHA-256 hashing speed, SQLite connection latency percentiles, and TF-IDF search ranking.
+- **Comprehensive Test Suite Expansion**: Added `tests/test_chunker_benchmark.py` validating section heading propagation and statistical metrics (13/13 passing tests).
+- **Production Asset Compilation**: Recompiled production distribution bundles with Vite into `app/static/`.
+
+---
+
 ## [1.3.1] - 2026-11-09
 
 ### Added
