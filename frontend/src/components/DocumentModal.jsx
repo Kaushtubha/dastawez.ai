@@ -17,6 +17,16 @@ const DocumentModal = ({ doc, onClose }) => {
     setTimeout(() => setCopiedChunkIdx(null), 2000);
   };
 
+  const handleExportFormat = (fmt) => {
+    const url = `/api/v1/documents/${doc.id}/export/${fmt}`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${(doc.filename || 'document').replace(/\.[^/.]+$/, "")}_${fmt}.${fmt === 'csv' ? 'csv' : 'md'}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   return (
     <div
       style={{
@@ -77,13 +87,33 @@ const DocumentModal = ({ doc, onClose }) => {
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="btn-secondary"
-            style={{ padding: '0.4rem 0.8rem', fontSize: '1.1rem', lineHeight: 1 }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <button
+              onClick={() => handleExportFormat('markdown')}
+              className="btn-secondary"
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Download reconstructed Markdown document"
+            >
+              <span>📝</span>
+              <span>Export MD</span>
+            </button>
+            <button
+              onClick={() => handleExportFormat('csv')}
+              className="btn-secondary"
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Download extracted chunks as CSV dataset"
+            >
+              <span>📊</span>
+              <span>Export CSV</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="btn-secondary"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '1.1rem', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}

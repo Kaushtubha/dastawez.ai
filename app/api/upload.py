@@ -440,4 +440,89 @@ def export_documents_archive(req: ExportArchiveRequest, db: Session = Depends(ge
     )
 
 
+@router.get("/documents/{id}/export/csv", summary="Export Document Chunks as CSV")
+def export_document_csv(id: int, db: Session = Depends(get_db)):
+    """
+    Exports all extracted text chunks and spatial metadata for a single document as a downloadable CSV.
+    """
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+
+    chunks = get_chunks_by_document(db, id)
+    csv_out = io.StringIO()
+    writer = csv.writer(csv_out)
+    writer.writerow(["chunk_id", "document_id", "page_number", "element_type", "section_heading", "word_count", "chunk_text"])
+
+    for c in chunks:
+        c_meta = json.loads(c.chunk_metadata_json) if c.chunk_metadata_json else {}
+        writer.writerow([
+            c.id,
+            doc.id,
+            c_meta.get("page_number", 1),
+            c_meta.get("element_type", "NarrativeText"),
+            c_meta.get("section_heading", ""),
+            c_meta.get("word_count", len((c.chunk_text or "").split())),
+            (c.chunk_text or "").replace("\r\n", " ").replace("\n", " ")
+        ])
+
+    clean_stem = Path(doc.filename).stem
+    return Response(
+        content=csv_out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{clean_stem}_chunks.csv"'}
+    )
+
+
+@router.get("/documents/{id}/export/markdown", summary="Export Document as Reconstructed Markdown")
+def export_document_markdown(id: int, db: Session = Depends(get_db)):
+    """
+    Reconstructs document structure into clean Markdown with metadata frontmatter and sections.
+    """
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+
+    chunks = get_chunks_by_document(db, id)
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    md_lines = [
+        "---",
+        f"title: \"{doc.filename}\"",
+        f"document_id: {doc.id}",
+        f"file_type: \"{doc.file_type}\"",
+        f"file_size_bytes: {doc.file_size}",
+        f"total_chunks: {len(chunks)}",
+        f"checksum_sha256: \"{doc.checksum_sha256 or 'N/A'}\"",
+        f"exported_at: \"{timestamp}\"",
+        "---",
+        "",
+        f"# {doc.filename}",
+        ""
+    ]
+
+    for idx, c in enumerate(chunks, 1):
+        c_meta = json.loads(c.chunk_metadata_json) if c.chunk_metadata_json else {}
+        heading = c_meta.get("section_heading")
+        page = c_meta.get("page_number", 1)
+        el_type = c_meta.get("element_type", "Text")
+
+        if heading:
+            md_lines.append(f"## {heading}")
+        else:
+            md_lines.append(f"### Section {idx} (Page {page} • {el_type})")
+
+        md_lines.append("")
+        md_lines.append(c.chunk_text or "")
+        md_lines.append("")
+
+    clean_stem = Path(doc.filename).stem
+    return Response(
+        content="\n".join(md_lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{clean_stem}_reconstructed.md"'}
+    )
+
+
+
 

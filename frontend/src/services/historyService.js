@@ -84,6 +84,16 @@ export const documentService = {
     return res.data;
   },
 
+  exportDocumentCSV: async (id) => {
+    const res = await api.get(`/documents/${id}/export/csv`, { responseType: 'blob' });
+    return res.data;
+  },
+
+  exportDocumentMarkdown: async (id) => {
+    const res = await api.get(`/documents/${id}/export/markdown`, { responseType: 'blob' });
+    return res.data;
+  },
+
   getCapabilities: async () => {
     const res = await api.get('/system/capabilities');
     return res.data;
