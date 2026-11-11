@@ -5,6 +5,7 @@ import MatrixBackground from '../components/MatrixBackground';
 import DocumentModal from '../components/DocumentModal';
 import ConfirmModal from '../components/ConfirmModal';
 import ExecutiveSummaryModal from '../components/ExecutiveSummaryModal';
+import CompareModal from '../components/CompareModal';
 import { documentService } from '../services/historyService';
 
 const HighlightText = ({ text, highlight }) => {
@@ -46,6 +47,7 @@ const HistoryPage = () => {
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, id: null, filename: '' });
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [summaryModal, setSummaryModal] = useState({ isOpen: false, id: null, filename: '' });
+  const [compareModal, setCompareModal] = useState({ isOpen: false, docIdA: null, docIdB: null });
   const [exportingZip, setExportingZip] = useState(false);
   const navigate = useNavigate();
 
@@ -311,7 +313,27 @@ const HistoryPage = () => {
                 ✓ {selectedIds.size} document{selectedIds.size > 1 ? 's' : ''} selected
               </span>
             </div>
-            <div style={{ display: 'flex', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {selectedIds.size === 2 && (
+                <button
+                  onClick={() => {
+                    const ids = Array.from(selectedIds);
+                    setCompareModal({ isOpen: true, docIdA: ids[0], docIdB: ids[1] });
+                  }}
+                  className="btn-secondary"
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    borderColor: 'var(--accent-cyan)'
+                  }}
+                >
+                  <span>⚖️</span>
+                  <span>Compare 2 Docs</span>
+                </button>
+              )}
               <button
                 onClick={() => handleExportArchive()}
                 disabled={exportingZip}
@@ -501,6 +523,14 @@ const HistoryPage = () => {
           filename={summaryModal.filename}
           isOpen={summaryModal.isOpen}
           onClose={() => setSummaryModal({ isOpen: false, id: null, filename: '' })}
+        />
+
+        {/* Semantic Comparison Modal */}
+        <CompareModal
+          isOpen={compareModal.isOpen}
+          docIdA={compareModal.docIdA}
+          docIdB={compareModal.docIdB}
+          onClose={() => setCompareModal({ isOpen: false, docIdA: null, docIdB: null })}
         />
       </main>
     </div>

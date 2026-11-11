@@ -9,14 +9,14 @@ def test_health_check_function():
     data = health_check()
     assert data["status"] == "healthy"
     assert "version" in data
-    assert data["version"] == "1.3.2"
+    assert data["version"] == "1.3.3"
 
 
 def test_detailed_health_check():
     """Verify Kubernetes-ready liveness/readiness probe and runtime diagnostics."""
     data = detailed_health_check()
     assert data["status"] in ("ready", "degraded")
-    assert data["version"] == "1.3.2"
+    assert data["version"] == "1.3.3"
     assert "probes" in data
     assert data["probes"]["liveness"] == "passing"
     assert "database" in data["probes"]

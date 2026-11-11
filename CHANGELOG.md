@@ -5,6 +5,20 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-11-10
+
+### Added
+- **AI Document Semantic Comparison Engine**: Implemented `POST /api/v1/documents/compare` endpoint calculating TF-IDF cosine similarity percentages, structural deltas (chunks, elements, file size), shared vocabulary, and distinct keyword divergence between any two catalog documents.
+- **Side-by-Side Comparison Modal (`CompareModal.jsx`)**: Designed a glassmorphic modal with animated similarity progress meter, dual document metric cards with visual delta badges, and vocabulary divergence pills.
+- **Batch Compare Toolbar Action**: Enhanced `HistoryPage.jsx` batch action toolbar with an instant "⚖️ Compare 2 Docs" trigger activated when two documents are selected.
+- **Single-Document CSV Chunk Dataset Export**: Added `GET /api/v1/documents/{id}/export/csv` streaming all extracted text chunks, coordinates, section headings, and word counts as CSV.
+- **Reconstructed Markdown Export**: Added `GET /api/v1/documents/{id}/export/markdown` reconstructing layout elements into formatted Markdown with YAML metadata frontmatter.
+- **Modal Export Controls**: Integrated 1-click "Export MD" and "Export CSV" buttons into `DocumentModal.jsx`.
+- **Test Suite Expansion**: Added `tests/test_document_exports.py` covering CSV export, Markdown reconstruction, and semantic document comparison.
+- **Production Distribution Asset Compilation**: Built optimized production frontend bundle with Vite into `app/static/`.
+
+---
+
 ## [1.3.2] - 2026-11-09
 
 ### Added

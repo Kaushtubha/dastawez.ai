@@ -32,6 +32,8 @@
 - ✅ **Keyword Extraction**: AI-powered keyword identification and frequency analysis
 - ✅ **Document Statistics**: Detailed metrics including word count, pages, and element types
 - ✅ **Chart.js Integration**: Beautiful, responsive data visualizations
+- ✅ **AI Document Semantic Comparison**: Side-by-side TF-IDF cosine similarity meter, delta counters, and vocabulary divergence analysis
+- ✅ **Multi-Format Export Controls**: 1-click single-document CSV chunk dataset and reconstructed Markdown export
 
 ### 💬 Smart Q&A System
 - ✅ **Natural Language Queries**: Ask questions in plain English

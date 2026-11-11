@@ -85,3 +85,49 @@ def test_export_document_markdown():
         if doc:
             delete_document(db, doc.id)
         db.close()
+
+
+def test_compare_documents_semantic():
+    """Verify semantic comparison between two documents."""
+    from app.api.upload import compare_documents, CompareDocumentsRequest
+    init_db()
+    db = SessionLocal()
+    doc_a = None
+    doc_b = None
+    try:
+        doc_a = create_document(
+            db=db,
+            filename="policy_v1.txt",
+            file_path="/tmp/policy_v1.txt",
+            file_type=".txt",
+            file_size=500,
+            metadata_json=json.dumps({"analysis": {"total_elements": 1}})
+        )
+        create_chunk(db=db, document_id=doc_a.id, chunk_text="Security guidelines require AES-256 data encryption and access audits.")
+
+        doc_b = create_document(
+            db=db,
+            filename="policy_v2.txt",
+            file_path="/tmp/policy_v2.txt",
+            file_type=".txt",
+            file_size=650,
+            metadata_json=json.dumps({"analysis": {"total_elements": 2}})
+        )
+        create_chunk(db=db, document_id=doc_b.id, chunk_text="Security guidelines require AES-256 data encryption, access audits, and token rotation.")
+
+        req = CompareDocumentsRequest(doc_id_a=doc_a.id, doc_id_b=doc_b.id)
+        res = compare_documents(req=req, db=db)
+
+        assert res["similarity_percentage"] > 70.0
+        assert "document_a" in res
+        assert "document_b" in res
+        assert "deltas" in res
+        assert "vocabulary" in res
+        assert "shared_keywords" in res["vocabulary"]
+        assert len(res["vocabulary"]["shared_keywords"]) > 0
+    finally:
+        if doc_a:
+            delete_document(db, doc_a.id)
+        if doc_b:
+            delete_document(db, doc_b.id)
+        db.close()

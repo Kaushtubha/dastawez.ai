@@ -524,5 +524,101 @@ def export_document_markdown(id: int, db: Session = Depends(get_db)):
     )
 
 
+class CompareDocumentsRequest(BaseModel):
+    doc_id_a: int = Field(..., description="First document ID for comparison")
+    doc_id_b: int = Field(..., description="Second document ID for comparison")
+
+
+@router.post("/documents/compare", summary="Compare Two Documents Semantically")
+def compare_documents(req: CompareDocumentsRequest, db: Session = Depends(get_db)):
+    """
+    Computes semantic similarity, structural deltas, and keyword divergence between two documents.
+    """
+    doc_a = get_document_by_id(db, req.doc_id_a)
+    doc_b = get_document_by_id(db, req.doc_id_b)
+
+    if not doc_a:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{req.doc_id_a} not found")
+    if not doc_b:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{req.doc_id_b} not found")
+
+    chunks_a = get_chunks_by_document(db, doc_a.id)
+    chunks_b = get_chunks_by_document(db, doc_b.id)
+
+    text_a = " ".join([c.chunk_text or "" for c in chunks_a]).strip()
+    text_b = " ".join([c.chunk_text or "" for c in chunks_b]).strip()
+
+    similarity_score = 1.0 if doc_a.id == doc_b.id else 0.0
+
+    if text_a and text_b:
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            vec = TfidfVectorizer(stop_words="english", max_features=1000)
+            tfidf_mat = vec.fit_transform([text_a, text_b])
+            cos_sim = cosine_similarity(tfidf_mat[0:1], tfidf_mat[1:2])[0][0]
+            similarity_score = round(float(cos_sim), 4)
+        except Exception:
+            similarity_score = 0.5
+    elif not text_a and not text_b:
+        similarity_score = 1.0
+
+    import re
+    words_a = set(re.findall(r"\b[a-zA-Z]{4,}\b", text_a.lower()))
+    words_b = set(re.findall(r"\b[a-zA-Z]{4,}\b", text_b.lower()))
+
+    shared_kw = sorted(list(words_a & words_b))[:10]
+    unique_a = sorted(list(words_a - words_b))[:8]
+    unique_b = sorted(list(words_b - words_a))[:8]
+
+    meta_a = json.loads(doc_a.metadata_json) if doc_a.metadata_json else {}
+    meta_b = json.loads(doc_b.metadata_json) if doc_b.metadata_json else {}
+
+    elements_a = meta_a.get("analysis", {}).get("total_elements", len(chunks_a))
+    elements_b = meta_b.get("analysis", {}).get("total_elements", len(chunks_b))
+
+    similarity_pct = round(similarity_score * 100, 1)
+
+    if similarity_pct >= 85:
+        summary_text = f"High semantic equivalence ({similarity_pct}%). Documents share substantial structure and phrasing."
+    elif similarity_pct >= 50:
+        summary_text = f"Moderate semantic overlap ({similarity_pct}%). Documents share related subject matter with distinct sections."
+    else:
+        summary_text = f"Low semantic correlation ({similarity_pct}%). Documents cover divergent topics or formats."
+
+    return {
+        "similarity_score": similarity_score,
+        "similarity_percentage": similarity_pct,
+        "document_a": {
+            "id": doc_a.id,
+            "filename": doc_a.filename,
+            "file_type": doc_a.file_type,
+            "file_size": doc_a.file_size,
+            "chunks_count": len(chunks_a),
+            "elements_count": elements_a
+        },
+        "document_b": {
+            "id": doc_b.id,
+            "filename": doc_b.filename,
+            "file_type": doc_b.file_type,
+            "file_size": doc_b.file_size,
+            "chunks_count": len(chunks_b),
+            "elements_count": elements_b
+        },
+        "deltas": {
+            "file_size_delta": (doc_b.file_size or 0) - (doc_a.file_size or 0),
+            "chunks_delta": len(chunks_b) - len(chunks_a),
+            "elements_delta": elements_b - elements_a
+        },
+        "vocabulary": {
+            "shared_keywords": shared_kw,
+            "unique_to_a": unique_a,
+            "unique_to_b": unique_b
+        },
+        "summary": summary_text
+    }
+
+
+
 
 

@@ -94,6 +94,11 @@ export const documentService = {
     return res.data;
   },
 
+  compareDocuments: async (docIdA, docIdB) => {
+    const res = await api.post('/documents/compare', { doc_id_a: docIdA, doc_id_b: docIdB });
+    return res.data;
+  },
+
   getCapabilities: async () => {
     const res = await api.get('/system/capabilities');
     return res.data;
