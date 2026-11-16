@@ -1,10 +1,27 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load .env file
+# Load .env file with native fallback if python-dotenv is not yet installed
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+env_file = BASE_DIR / ".env"
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(env_file)
+except ImportError:
+    if env_file.exists():
+        try:
+            with open(env_file, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped and not stripped.startswith("#") and "=" in stripped:
+                        k, v = stripped.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
 
 class Settings:
     APP_NAME: str = os.getenv("APP_NAME", "Dastawez.ai - DocuMind")
@@ -21,7 +38,9 @@ class Settings:
     DB_ECHO: bool = os.getenv("DB_ECHO", "False").lower() in ("true", "1", "yes")
     
     # Vector DB
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
+    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "localhost")
+    QDRANT_PORT: str = os.getenv("QDRANT_PORT", "6333")
+    QDRANT_URL: str = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
     QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
     
     # OpenAI & LLM
@@ -32,8 +51,14 @@ class Settings:
     # File Uploads
     MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024))) # 50 MB
     UPLOAD_FOLDER: Path = BASE_DIR / os.getenv("UPLOAD_FOLDER", "uploads")
-    ALLOWED_EXTENSIONS: set = {"pdf", "docx", "txt", "md"}
+    ALLOWED_EXTENSIONS: set = set(
+        ext.strip().lower().lstrip(".") for ext in os.getenv("ALLOWED_EXTENSIONS", "pdf,docx,txt,md,markdown").split(",") if ext.strip()
+    ) or {"pdf", "docx", "txt", "md", "markdown"}
     
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "True").lower() in ("true", "1", "yes")
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "300"))
+
     # CORS
     CORS_ORIGINS: list = [
         origin.strip() for origin in os.getenv(
@@ -44,7 +69,10 @@ class Settings:
     
     # Static & Upload folder ensure
     def __init__(self):
-        self.UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-        (BASE_DIR / "app" / "static").mkdir(parents=True, exist_ok=True)
+        try:
+            self.UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+            (BASE_DIR / "app" / "static").mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
 
 settings = Settings()

@@ -22,8 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.ingestion.chunker import DocumentChunker, create_chunks, compute_chunk_metrics
-from app.db.metadata import SessionLocal, init_db, Document
-from sqlalchemy import text
+from app.db.vector_store import vector_store
 
 
 def benchmark_chunker(iterations=10):
@@ -82,16 +81,31 @@ def benchmark_hashing(iterations=100):
 
 def benchmark_database(iterations=100):
     print("\n  [3/4] Profiling SQLite Query Latency & Connection Pool...")
-    init_db()
-    db = SessionLocal()
     latencies = []
     try:
-        for _ in range(iterations):
-            t0 = time.perf_counter()
-            db.execute(text("SELECT 1"))
-            latencies.append((time.perf_counter() - t0) * 1000)
-    finally:
-        db.close()
+        from app.db.metadata import SessionLocal, init_db
+        from sqlalchemy import text
+        init_db()
+        db = SessionLocal()
+        try:
+            for _ in range(iterations):
+                t0 = time.perf_counter()
+                db.execute(text("SELECT 1"))
+                latencies.append((time.perf_counter() - t0) * 1000)
+        finally:
+            db.close()
+    except Exception:
+        import sqlite3
+        conn = sqlite3.connect("documind.db")
+        cur = conn.cursor()
+        try:
+            for _ in range(iterations):
+                t0 = time.perf_counter()
+                cur.execute("SELECT 1")
+                _ = cur.fetchone()
+                latencies.append((time.perf_counter() - t0) * 1000)
+        finally:
+            conn.close()
 
     latencies.sort()
     p50 = round(latencies[len(latencies) // 2], 3)
@@ -106,27 +120,26 @@ def benchmark_database(iterations=100):
 
 def benchmark_tfidf_search():
     print("\n  [4/4] Profiling TF-IDF Vector Extraction & Query Ranking...")
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    corpus = [
-        f"Document {i} discusses enterprise security compliance, data residency laws, and encryption at rest with AES-256."
+    chunks = [
+        {
+            "id": i,
+            "document_id": 1,
+            "chunk_text": f"Document chunk {i} discusses enterprise security compliance, data residency laws, and encryption at rest with AES-256.",
+            "metadata": {"filename": "security_policy.pdf", "page_number": (i // 10) + 1}
+        }
         for i in range(150)
     ]
     query = "encryption at rest and data residency compliance"
 
     start = time.perf_counter()
-    vectorizer = TfidfVectorizer()
-    matrix = vectorizer.fit_transform(corpus)
-    query_vec = vectorizer.transform([query])
-    scores = cosine_similarity(query_vec, matrix).flatten()
+    ranked = vector_store.search_chunks(query=query, chunks=chunks, top_k=5)
     duration = time.perf_counter() - start
 
-    top_idx = scores.argsort()[-3:][::-1]
     latency_ms = round(duration * 1000, 2)
-    print(f"      ✓ Indexed 150 documents & executed ranking in {latency_ms}ms")
-    print(f"      ✓ Top similarity score: {round(float(scores[top_idx[0]]) * 100, 1)}%")
-    return {"latency_ms": latency_ms, "top_score": float(scores[top_idx[0]])}
+    top_score = ranked[0].get("score", 0.0) if ranked else 0.0
+    print(f"      ✓ Indexed 150 document chunks & executed ranking in {latency_ms}ms")
+    print(f"      ✓ Top similarity score: {round(float(top_score) * 100, 1)}%")
+    return {"latency_ms": latency_ms, "top_score": top_score}
 
 
 def main():

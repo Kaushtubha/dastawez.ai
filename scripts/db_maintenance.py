@@ -14,9 +14,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.config import settings
-from app.db.metadata import SessionLocal, Document, Chunk
-
 
 def run_maintenance():
     db_path = PROJECT_ROOT / "documind.db"
@@ -61,21 +58,19 @@ def run_maintenance():
         conn.commit()
         print("[+] VACUUM completed successfully.")
 
+        # 4. Summary counts via SQLite
+        cursor.execute("SELECT count(*) FROM documents;")
+        doc_count = cursor.fetchone()[0]
+        cursor.execute("SELECT count(*) FROM chunks;")
+        chunk_count = cursor.fetchone()[0]
+
     finally:
         conn.close()
 
     size_after = db_path.stat().st_size
     reclaimed = size_before - size_after
     print(f"[*] Database size after maintenance: {round(size_after / 1024, 2)} KB (Reclaimed: {round(reclaimed / 1024, 2)} KB)")
-
-    # 4. Summary counts
-    db = SessionLocal()
-    try:
-        doc_count = db.query(Document).count()
-        chunk_count = db.query(Chunk).count()
-        print(f"[✓] Maintenance Complete! Total Documents: {doc_count} | Total Chunks: {chunk_count}")
-    finally:
-        db.close()
+    print(f"[✓] Maintenance Complete! Total Documents: {doc_count} | Total Chunks: {chunk_count}")
 
 
 if __name__ == "__main__":

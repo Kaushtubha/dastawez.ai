@@ -1,14 +1,15 @@
-# 🚀 DocuMind AI - Intelligent Document Analysis Platform
+# 🚀 Dastawez.ai (DocuMind) - Intelligent Document Processing Platform
 
 <div align="center">
 
-![DocuMind AI](https://img.shields.io/badge/DocuMind-AI-blue)
+![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
 ![FastAPI](https://img.shields.io/badge/fastapi-0.104+-green.svg)
 
-**An Enterprise-Grade AI-Powered Document Analysis & Q&A System**
+**An Enterprise-Grade AI-Powered Document Analysis & Grounded Q&A System**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Deployment](#-deployment) • [Contributing](#-contributing)
 

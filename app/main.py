@@ -82,12 +82,15 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 # In-Memory Token Bucket Rate Limiter
-RATE_LIMIT_MAX = 300  # requests per minute per client IP
+RATE_LIMIT_MAX = settings.RATE_LIMIT_PER_MINUTE  # requests per minute per client IP
 RATE_LIMIT_WINDOW = 60.0  # seconds
 _client_request_history = {}
 
 @app.middleware("http")
 async def rate_limiter_middleware(request: Request, call_next):
+    if not settings.RATE_LIMIT_ENABLED:
+        return await call_next(request)
+
     # Bypass for static assets and documentation
     path = request.url.path
     if path.startswith(("/assets", "/docs", "/redoc", "/openapi.json")):
