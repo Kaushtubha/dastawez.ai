@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -79,6 +80,20 @@ async def add_process_time_header(request: Request, call_next):
     response = await call_next(request)
     process_time = time.perf_counter() - start_time
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+    return response
+
+# Security Headers & Distributed Request ID Tracing Middleware
+@app.middleware("http")
+async def security_headers_and_tracing_middleware(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = req_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 # In-Memory Token Bucket Rate Limiter
