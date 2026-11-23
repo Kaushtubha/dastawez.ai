@@ -53,6 +53,32 @@ class ParsedElement:
 class DocumentParser:
     """Multi-format Document Parser supporting PDF, DOCX, TXT, and Markdown with layout intelligence."""
 
+    @staticmethod
+    def _sanitize_text(text: str) -> str:
+        """Sanitizes text by removing null bytes and non-printable control characters."""
+        if not text:
+            return ""
+        # Strip null bytes and stray control chars except standard whitespace (\t, \n, \r)
+        cleaned = text.replace("\x00", "")
+        return re.sub(r"[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]", "", cleaned)
+
+    @classmethod
+    def _read_file_safe(cls, file_path: str) -> str:
+        """Reads file content with multi-encoding fallback and control-character sanitization."""
+        encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+        with open(file_path, "rb") as f:
+            raw_bytes = f.read()
+
+        for enc in encodings:
+            try:
+                decoded = raw_bytes.decode(enc)
+                return cls._sanitize_text(decoded)
+            except (UnicodeDecodeError, LookupError):
+                continue
+
+        # Ultimate fallback with character replacement
+        return cls._sanitize_text(raw_bytes.decode("utf-8", errors="replace"))
+
     def parse(self, file_path: str, filename: str) -> Dict[str, Any]:
         ext = Path(filename).suffix.lower()
         if ext == ".pdf":
@@ -156,8 +182,7 @@ class DocumentParser:
 
     def _parse_txt(self, file_path: str) -> Tuple[List[ParsedElement], int]:
         elements: List[ParsedElement] = []
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
+        content = self._read_file_safe(file_path)
 
         paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
         total_pages = max(1, len(paragraphs) // 10)
@@ -179,8 +204,8 @@ class DocumentParser:
     def _parse_markdown(self, file_path: str) -> Tuple[List[ParsedElement], int]:
         """Parses Markdown files preserving header hierarchy, lists, tables, and code blocks."""
         elements: List[ParsedElement] = []
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
+        content = self._read_file_safe(file_path)
+        lines = content.splitlines(keepends=True)
 
         page_estimate = max(1, len(lines) // 35)
         in_code_block = False
