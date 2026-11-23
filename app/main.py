@@ -48,7 +48,7 @@ app = FastAPI(
         "and Conversational Question-Answering platform. It features layout-preserving element "
         "extraction, spatial coordinate retention, hybrid vector search, and grounded citations."
     ),
-    version="1.3.3",
+    version="1.3.4",
     openapi_tags=TAGS_METADATA,
     contact={
         "name": "Dastawez.ai Engineering Support",
@@ -61,6 +61,12 @@ app = FastAPI(
     },
     docs_url="/docs",
     redoc_url="/redoc",
+    swagger_ui_parameters={
+        "docExpansion": "none",
+        "persistAuthorization": True,
+        "filter": True,
+        "syntaxHighlight.theme": "monokai"
+    },
     lifespan=lifespan
 )
 
