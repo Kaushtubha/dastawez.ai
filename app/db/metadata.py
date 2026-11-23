@@ -10,15 +10,18 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Boolean,
-    func
+    func,
+    text
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from app.config import settings
 
-# Database Engine & Session
+# Database Engine & Session with connection pooling & ping verification
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
+    pool_pre_ping=True,
+    pool_recycle=3600,
     echo=settings.DB_ECHO
 )
 
@@ -235,6 +238,31 @@ def create_user(db: Session, username: str, email: str, hashed_password: str) ->
     db.commit()
     db.refresh(user)
     return user
+
+
+def verify_schema_integrity(db: Optional[Session] = None) -> Dict[str, Any]:
+    """Runs database PRAGMA integrity check and verifies model table readiness."""
+    should_close = False
+    if db is None:
+        db = SessionLocal()
+        should_close = True
+
+    try:
+        status: Dict[str, Any] = {"status": "healthy", "tables": {}, "checks": []}
+        if "sqlite" in settings.DATABASE_URL:
+            result = db.execute(text("PRAGMA integrity_check;")).fetchall()
+            status["checks"] = [row[0] for row in result]
+            status["integrity_ok"] = status["checks"] == ["ok"]
+        else:
+            status["integrity_ok"] = True
+
+        status["tables"]["documents"] = db.query(Document).count()
+        status["tables"]["chunks"] = db.query(Chunk).count()
+        status["tables"]["users"] = db.query(User).count()
+        return status
+    finally:
+        if should_close:
+            db.close()
 
 
 # Auto-initialize database tables and schema migrations on module import
