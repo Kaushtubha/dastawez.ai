@@ -129,6 +129,38 @@ server {
 
 ## Cloud Platform Deployment
 
+### Vercel Deployment (Frontend Single-Page Application)
+
+The React frontend includes zero-config Vercel SPA deployment support with `vercel.json` rewrites and automated production asset bundling.
+
+#### Option A: Deploy via Vercel Web Dashboard (Recommended)
+1. Push your repository to GitHub: `git push origin main`
+2. Log in to [vercel.com](https://vercel.com) and click **"Add New Project"**.
+3. Import your `dastawez.ai` repository.
+4. Configure Project Settings:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Set Environment Variables:
+   - `VITE_API_URL`: URL of your backend API (e.g. `https://api.yourdomain.com/api/v1` or leave empty to use relative `/api/v1` reverse proxy).
+6. Click **Deploy**.
+
+#### Option B: Deploy via Vercel CLI
+```bash
+# Install Vercel CLI globally
+npm i -g vercel
+
+# Navigate to frontend and deploy
+cd frontend
+vercel
+
+# Deploy directly to production
+vercel --prod
+```
+
+---
+
 ### AWS Deployment
 
 #### Using ECS (Elastic Container Service)

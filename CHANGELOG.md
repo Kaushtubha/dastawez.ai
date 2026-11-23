@@ -5,6 +5,22 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-11-23
+
+### Added
+- **HTTP Security Headers & Tracing Middleware**: Added strict enterprise HTTP security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection`, `Referrer-Policy`, `Content-Security-Policy`) and distributed `X-Request-ID` telemetry tracing in `app/main.py`.
+- **Enriched OpenAPI Specification**: Enriched FastAPI metadata with detailed operation descriptions, parameter documentation, custom branding, and telemetry schemas in `/docs`.
+- **Multi-Encoding Parser Fallback & Sanitization**: Implemented `_read_file_safe` in `app/ingestion/parser.py` supporting UTF-8, UTF-8 BOM, CP1252, and Latin-1 fallbacks alongside null-byte (`\x00`) and control-character sanitization.
+- **Sentence-Aware Chunker & Token Estimator**: Added sentence-boundary detection in `DocumentChunker` preventing sentence truncation, alongside heuristic subword token counter (`estimate_tokens`).
+- **Database Connection Pooling & Schema Verification**: Configured connection pool recycling (`pool_recycle=3600`, `pool_pre_ping=True`) and added `verify_schema_integrity` in `app/db/metadata.py`.
+- **GitHub Actions Multi-Python CI Matrix**: Enhanced `.github/workflows/ci.yml` with Python 3.10, 3.11, and 3.12 test matrices, pip cache, and automated standalone runner verification.
+- **Unit Test Coverage Expansion**: Created `tests/test_sanitization.py` validating multi-encoding decoding, control character stripping, token calculation, and sentence chunking.
+- **Frontend Timeout & Global Error Interceptor**: Injected 30s timeout and response error interceptor in `frontend/src/services/api.js` normalizing network timeouts and clearing expired sessions.
+- **Interactive Terminal Query CLI**: Created `scripts/query_cli.py` providing a terminal REPL, ASCII confidence meters, document scope filtering, and cited source excerpts.
+- **Vercel Cloud Deployment Runbook**: Added complete Vercel deployment documentation with SPA rewrites and environment configuration in `DEPLOYMENT.md`.
+
+---
+
 ## [1.3.3] - 2026-11-10
 
 ### Added

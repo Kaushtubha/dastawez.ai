@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
-![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.3-blue)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.4-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
@@ -19,9 +19,12 @@
 
 ### 📄 Document Processing
 - ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, and Markdown (MD) files
+- ✅ **Resilient Multi-Encoding Fallback**: Seamless decoding across UTF-8, UTF-8 BOM, CP1252, and Latin-1 with control-character sanitization
 - ✅ **Cryptographic Deduplication**: Instant cache hit detection via SHA-256 fingerprinting
-- ✅ **Sliding Word-Overlap Chunking**: Context-preserving token boundaries across chunk windows
+- ✅ **Sentence-Aware Sliding Chunker**: Boundary-respecting sliding windows preventing sentence truncation
+- ✅ **Token Estimation & Metrics**: Built-in subword token estimation (`estimate_tokens`) and chunk statistical profiler
 - ✅ **Hierarchical Heading Context**: Attaches section headings (Title, Header) to chunks for superior RAG semantic retrieval
+- ✅ **Terminal Query CLI Tool**: Interactive terminal REPL (`scripts/query_cli.py`) with ASCII confidence meters and citation excerpts
 - ✅ **Architecture Benchmarking & Profiler**: Built-in CLI latency and throughput profiler (scripts/benchmark.py)
 - ✅ **CLI & Maintenance Utilities**: Headless CLI ingestion and SQLite database defragmenter
 - ✅ **Smart Parsing**: Automatic document parsing and content extraction
