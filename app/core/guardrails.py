@@ -1,8 +1,49 @@
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 class Guardrails:
-    """Security, input sanitation, and response confidence scoring."""
+    """Security, input sanitation, prompt injection defense, PII redaction, and response confidence scoring."""
+
+    # Common prompt injection, override, and jailbreak signatures
+    PROMPT_INJECTION_PATTERNS = [
+        (re.compile(r"(?i)\bignore\s+(all\s+|any\s+|the\s+)?(previous|prior|above)\s+(instructions|prompts|directives)\b"), "instruction_override"),
+        (re.compile(r"(?i)\b(system\s+prompt|developer\s+mode|jailbreak|dan\s+mode)\b"), "jailbreak_attempt"),
+        (re.compile(r"(?i)\b(you\s+are\s+now|act\s+as\s+an?\s+unrestricted|bypass\s+all\s+rules)\b"), "persona_hijacking"),
+        (re.compile(r"(?i)\b(reveal|leak|print|show)\s+(the\s+)?(system|initial|hidden)\s+(instructions|prompt|rules)\b"), "prompt_leakage"),
+        (re.compile(r"(?i)\b(union\s+select|drop\s+table|delete\s+from|insert\s+into)\b"), "sql_injection")
+    ]
+
+    # Regex patterns for identifying sensitive PII
+    EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+    PHONE_PATTERN = re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+    CARD_PATTERN = re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b")
+    API_KEY_PATTERN = re.compile(r"\b(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9_-]{20,})\b")
+
+    @classmethod
+    def detect_prompt_injection(cls, query: str) -> Tuple[bool, str]:
+        """
+        Inspects query string for known adversarial injection or prompt hijacking patterns.
+        Returns (is_detected, reason_code).
+        """
+        if not query:
+            return False, ""
+        for pattern, reason in cls.PROMPT_INJECTION_PATTERNS:
+            if pattern.search(query):
+                return True, reason
+        return False, ""
+
+    @classmethod
+    def redact_pii(cls, text: str) -> str:
+        """
+        Redacts emails, phone numbers, credit cards, and API secrets from text.
+        """
+        if not text:
+            return ""
+        clean = cls.API_KEY_PATTERN.sub("[REDACTED_KEY]", text)
+        clean = cls.CARD_PATTERN.sub("[REDACTED_CARD]", clean)
+        clean = cls.EMAIL_PATTERN.sub("[REDACTED_EMAIL]", clean)
+        clean = cls.PHONE_PATTERN.sub("[REDACTED_PHONE]", clean)
+        return clean
 
     @staticmethod
     def sanitize_input(text: str) -> str:
