@@ -69,6 +69,17 @@ async def upload_document(
             detail=f"File exceeds maximum allowed size ({settings.MAX_UPLOAD_SIZE // (1024*1024)} MB)"
         )
 
+    # Magic byte signature sniffing & integrity verification
+    from app.ingestion.parser import DocumentParser
+    is_valid_format, validation_reason = DocumentParser.validate_magic_bytes(str(destination_path), filename)
+    if not is_valid_format:
+        if os.path.exists(destination_path):
+            os.remove(destination_path)
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Invalid file payload: {validation_reason}"
+        )
+
     # Cryptographic SHA-256 Checksum Calculation
     hasher = hashlib.sha256()
     with open(destination_path, "rb") as f:
