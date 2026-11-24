@@ -5,6 +5,21 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2026-11-24
+
+### Added
+- **Hardened Container Runtime Security**: Added non-root unprivileged system user (`appuser:1000`) and group (`appgroup:1000`) with restricted file ownership and permissions in `Dockerfile`.
+- **Docker Compose Health Gating & Log Rotation**: Added Qdrant TCP socket healthcheck probe, enforced `service_healthy` startup dependency in `docker-compose.yml`, and configured 10MB/3-file rotating JSON logging drivers.
+- **Adversarial Prompt Injection Defense**: Added regex pattern matching for jailbreaks, persona hijacking, and instruction overrides (`detect_prompt_injection`) in `app/core/guardrails.py`.
+- **Sensitive PII Redaction Engine**: Added automated masking for email addresses, phone numbers, credit card numbers, and secret API keys (`redact_pii`) in `app/core/guardrails.py`.
+- **Pipeline Guardrail Enforcement**: Wired prompt injection blocking and PII masking directly into `AIAgent.ask` and `POST /api/v1/ask` with `guardrail_blocked` telemetry.
+- **Dedicated Kubernetes Liveness & Readiness Probes**: Implemented `GET /api/v1/health/liveness` (fast heartbeat) and `GET /api/v1/health/readiness` (database and storage accessibility verification).
+- **Security & Probe Unit Test Suite**: Added `tests/test_guardrails_security.py` with 100% test coverage for injection detection, PII redaction, confidence bounds, and probe handlers.
+- **RAG Retrieval Quality & Latency Evaluator**: Built `scripts/eval_rag.py` measuring retrieval latency, P50/P95 percentiles, keyword overlap, and synthesis confidence.
+- **Real-Time Network Status Banner**: Created `NetworkStatusBanner.jsx` with browser offline/online event listeners and health re-check controls, integrated into `App.jsx`.
+
+---
+
 ## [1.3.4] - 2026-11-23
 
 ### Added

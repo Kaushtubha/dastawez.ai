@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
-![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.4-blue)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
@@ -41,9 +41,12 @@
 
 ### 💬 Smart Q&A System
 - ✅ **Natural Language Queries**: Ask questions in plain English
+- ✅ **Adversarial Prompt Injection Defense**: Active filtering blocking jailbreaks and persona hijacking
+- ✅ **Sensitive PII Redaction**: Automatic masking of emails, phone numbers, credit cards, and API keys
 - ✅ **Context-Aware Responses**: AI-powered answers based on document content
 - ✅ **Confidence Scoring**: Transparency with answer confidence levels
 - ✅ **Source Attribution**: Direct references to source documents
+- ✅ **RAG Pipeline Evaluator**: CLI profiler measuring latency percentiles and keyword overlap (scripts/eval_rag.py)
 
 ### 🎨 Modern UI/UX
 - ✅ **Global Spotlight Command Palette**: Instant modal launcher (Ctrl+K / Cmd+K) for fast document search and keyboard navigation
