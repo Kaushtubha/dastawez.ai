@@ -198,6 +198,25 @@ def delete_document(db: Session, doc_id: int) -> bool:
     return True
 
 
+def update_document_tags(db: Session, doc_id: int, tags: List[str]) -> Optional[Document]:
+    """Updates custom organizational tags/categories in document metadata."""
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        return None
+    meta = {}
+    if doc.metadata_json:
+        try:
+            meta = json.loads(doc.metadata_json)
+        except Exception:
+            meta = {}
+    clean_tags = sorted(list(set(t.strip() for t in tags if t and t.strip())))
+    meta["tags"] = clean_tags
+    doc.metadata_json = json.dumps(meta)
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+
 def create_chunk(
     db: Session,
     document_id: int,

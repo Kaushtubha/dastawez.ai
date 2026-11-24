@@ -272,6 +272,27 @@ def export_document_data(
     )
 
 
+class UpdateTagsRequest(BaseModel):
+    tags: List[str] = Field(..., description="Array of category or organizational tags")
+
+
+@router.patch("/documents/{id}/tags", summary="Update Document Category Tags")
+def update_document_tags_endpoint(id: int, req: UpdateTagsRequest, db: Session = Depends(get_db)):
+    """Assigns custom metadata tags (e.g. Legal, Finance, HR) to an existing document."""
+    from app.db.metadata import update_document_tags
+    updated_doc = update_document_tags(db, id, req.tags)
+    if not updated_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+
+    return {
+        "success": True,
+        "document_id": updated_doc.id,
+        "filename": updated_doc.filename,
+        "tags": updated_doc.to_dict().get("metadata", {}).get("tags", []),
+        "message": f"Updated tags for document #{id}"
+    }
+
+
 @router.delete("/documents/{id}", summary="Delete Document and Chunks")
 def remove_document(id: int, db: Session = Depends(get_db)):
     """Deletes a document and its associated chunks and storage file."""
