@@ -26,6 +26,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create unprivileged system user for hardened container runtime
+RUN groupadd -g 1000 appgroup \
+    && useradd -u 1000 -g appgroup -s /bin/bash -m appuser
+
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
@@ -41,8 +45,11 @@ COPY pytest.ini pytest.ini
 # Copy compiled frontend assets from Stage 1 into app/static
 COPY --from=frontend-builder /app/app/static ./app/static
 
-# Create uploads storage directory
-RUN mkdir -p /app/uploads
+# Create uploads storage directory and configure unprivileged user ownership
+RUN mkdir -p /app/uploads \
+    && chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 8000
 
