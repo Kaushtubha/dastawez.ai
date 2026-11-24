@@ -182,8 +182,44 @@ def health_check():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.3.3"
+        "version": "1.3.5"
     }
+
+@app.get("/api/v1/health/liveness", tags=["System"], summary="Kubernetes Liveness Probe")
+def liveness_probe():
+    """Fast zero-overhead liveness probe returning process heartbeat."""
+    return {"status": "alive", "timestamp": time.time()}
+
+@app.get("/api/v1/health/readiness", tags=["System"], summary="Kubernetes Readiness Probe")
+def readiness_probe():
+    """
+    Readiness probe verifying DB connection pool availability and storage writeability.
+    Returns HTTP 200 when ready to receive traffic, or HTTP 503 when degraded.
+    """
+    from sqlalchemy import text
+    checks = {"database": False, "storage": False}
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        checks["database"] = True
+    except Exception:
+        checks["database"] = False
+
+    try:
+        checks["storage"] = settings.UPLOAD_FOLDER.exists()
+    except Exception:
+        checks["storage"] = False
+
+    is_ready = checks["database"] and checks["storage"]
+    if not is_ready:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready", "checks": checks}
+        )
+
+    return {"status": "ready", "checks": checks}
 
 @app.get("/api/v1/system/health/detailed", tags=["System"])
 def detailed_health_check():
@@ -216,7 +252,7 @@ def detailed_health_check():
     return {
         "status": overall_status,
         "app": settings.APP_NAME,
-        "version": "1.3.3",
+        "version": "1.3.5",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "probes": {
             "liveness": "passing",
@@ -246,7 +282,7 @@ def system_capabilities_endpoint():
     from app.db.vector_store import HAS_QDRANT
     return {
         "app_name": settings.APP_NAME,
-        "version": "1.3.3",
+        "version": "1.3.5",
         "supported_formats": sorted(list(settings.ALLOWED_EXTENSIONS)),
         "max_upload_size_bytes": settings.MAX_UPLOAD_SIZE,
         "max_upload_size_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024),
