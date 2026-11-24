@@ -1,8 +1,14 @@
 import json
 import re
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from app.db.metadata import Document, Chunk
+try:
+    from sqlalchemy.orm import Session
+    from app.db.metadata import Document, Chunk
+except (ImportError, ModuleNotFoundError):
+    Session = Any
+    Document = None
+    Chunk = None
+
 from app.db.vector_store import vector_store
 
 class ContextRetriever:
@@ -24,13 +30,19 @@ class ContextRetriever:
         if len(query_lower) > 5 and query_lower in chunk_lower:
             return 0.35
 
-        # 2. Key identifier & alphanumeric terms (e.g. "Section 4.1", "$50,000", "Clause 2")
-        alphanumeric_terms = set(re.findall(r"\b[A-Za-z0-9_.-]{3,}\b", query_lower))
-        if not alphanumeric_terms:
+        # 2. Key identifier & alphanumeric terms (excluding common stop words)
+        stop_words = {
+            "what", "which", "when", "where", "who", "whom", "this", "that", "these",
+            "those", "have", "from", "with", "about", "under", "over", "into", "the",
+            "for", "and", "are", "can", "how", "why", "all", "any"
+        }
+        all_terms = set(re.findall(r"\b[A-Za-z0-9_.-]{3,}\b", query_lower))
+        significant_terms = all_terms - stop_words
+        if not significant_terms:
             return 0.0
 
-        matches = sum(1 for term in alphanumeric_terms if term in chunk_lower)
-        ratio = matches / len(alphanumeric_terms)
+        matches = sum(1 for term in significant_terms if term in chunk_lower)
+        ratio = matches / len(significant_terms)
         return round(ratio * 0.25, 3)
 
     def retrieve(
