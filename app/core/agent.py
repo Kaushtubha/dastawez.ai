@@ -27,7 +27,20 @@ class AIAgent:
         question: str,
         document_id: Optional[int] = None
     ) -> Dict[str, Any]:
+        # Adversarial Prompt Injection Guardrail
+        is_injection, reason = Guardrails.detect_prompt_injection(question)
+        if is_injection:
+            logger.warning("Adversarial prompt injection flagged: reason=%s query=%s", reason, question[:80])
+            return {
+                "answer": "Security Guardrail Alert: The submitted query was blocked due to detected adversarial prompt override patterns.",
+                "confidence": 0.0,
+                "sources": [],
+                "guardrail_blocked": True,
+                "reason": reason
+            }
+
         sanitized_query = Guardrails.sanitize_input(question)
+        sanitized_query = Guardrails.redact_pii(sanitized_query)
         if not sanitized_query:
             return {
                 "answer": "Please provide a valid question.",

@@ -43,6 +43,7 @@ class AskResponse(BaseModel):
     answer: str
     confidence: float = Field(..., ge=0.0, le=1.0, description="Calculated confidence score between 0.0 and 1.0.")
     sources: List[Dict[str, Any]]
+    guardrail_blocked: Optional[bool] = Field(False, description="Whether guardrails flagged and blocked an adversarial query.")
 
 @router.post("/ask", response_model=AskResponse, summary="Query Document Context")
 def ask_document_endpoint(
@@ -66,7 +67,8 @@ def ask_document_endpoint(
         "question": req.question,
         "answer": result["answer"],
         "confidence": result["confidence"],
-        "sources": result["sources"]
+        "sources": result["sources"],
+        "guardrail_blocked": result.get("guardrail_blocked", False)
     }
 
 @router.get("/analysis/{id}", summary="Get Document Analysis for Chart.js")
