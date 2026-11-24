@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
-![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.5-blue)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.6-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
@@ -19,6 +19,10 @@
 
 ### 📄 Document Processing
 - ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, and Markdown (MD) files
+- ✅ **Magic Byte Sniffing & Validation**: Deep binary header inspection rejecting spoofed extensions and executables
+- ✅ **Document Categorization Tags**: Custom organization tags and metadata category labeling
+- ✅ **Hybrid Semantic + Lexical Retrieval**: Dense vector search boosted by exact legal clause and keyword matches
+- ✅ **Database Backup & Restore Tool**: Live atomic SQLite snapshotting and gzip restoration utility (scripts/db_backup.py)
 - ✅ **Resilient Multi-Encoding Fallback**: Seamless decoding across UTF-8, UTF-8 BOM, CP1252, and Latin-1 with control-character sanitization
 - ✅ **Cryptographic Deduplication**: Instant cache hit detection via SHA-256 fingerprinting
 - ✅ **Sentence-Aware Sliding Chunker**: Boundary-respecting sliding windows preventing sentence truncation

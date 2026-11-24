@@ -5,6 +5,19 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2026-11-25
+
+### Added
+- **Magic Byte Signature Sniffing**: Added `validate_magic_bytes` in `app/ingestion/parser.py` validating file signatures (`%PDF`, `PK\x03\x04`, text printable) and blocking binary executables (`MZ`, `ELF`).
+- **Upload Media Type Enforcement**: Injected magic byte verification into `POST /api/v1/upload-docs` returning HTTP 415 for spoofed or corrupted extensions.
+- **Hybrid Retrieval Score Fusion**: Upgraded `ContextRetriever` with exact lexical matching fusion boosting critical legal identifiers, clauses, and alphanumeric figures.
+- **Document Metadata Tagging**: Added `PATCH /api/v1/documents/{id}/tags` endpoint and database helpers in `app/db/metadata.py` to organize documents by custom categories.
+- **Database Backup & Restoration Tool**: Created `scripts/db_backup.py` generating compressed SQLite snapshots with live backups and verified restoration.
+- **Automated Validation Test Suite**: Created `tests/test_file_validation_and_tags.py` with 100% passing tests for magic bytes sniffing and tagging logic.
+- **Document Tag Badge Component**: Created `DocumentTagBadge.jsx` featuring deterministic color palettes, remove triggers, and active filter states.
+
+---
+
 ## [1.3.5] - 2026-11-24
 
 ### Added
