@@ -79,6 +79,47 @@ class DocumentParser:
         # Ultimate fallback with character replacement
         return cls._sanitize_text(raw_bytes.decode("utf-8", errors="replace"))
 
+    @classmethod
+    def validate_magic_bytes(cls, file_path: str, filename: str) -> Tuple[bool, str]:
+        """
+        Validates file signature / magic bytes to prevent file extension spoofing
+        or binary executable injection.
+        """
+        if not os.path.exists(file_path):
+            return False, "File does not exist on disk"
+
+        ext = Path(filename).suffix.lower().lstrip(".")
+        try:
+            with open(file_path, "rb") as f:
+                header = f.read(512)
+        except Exception as e:
+            return False, f"Could not read file header: {e}"
+
+        # Prevent executable payload uploads
+        if header.startswith(b"MZ"):
+            return False, "Disallowed executable format (DOS/Windows PE detected)"
+        if header.startswith(b"\x7fELF"):
+            return False, "Disallowed executable format (Linux ELF detected)"
+        if header.startswith(b"\xca\xfe\xba\xbe") or header.startswith(b"\xfe\xed\xfa\xce"):
+            return False, "Disallowed binary executable format detected"
+
+        if ext == "pdf":
+            if not header.startswith(b"%PDF"):
+                return False, "Invalid PDF header: Missing %PDF signature"
+            return True, "valid_pdf"
+
+        if ext == "docx":
+            if not header.startswith(b"PK\x03\x04"):
+                return False, "Invalid DOCX header: Missing PK ZIP signature"
+            return True, "valid_docx"
+
+        if ext in ("txt", "md", "markdown"):
+            if b"\x00" in header:
+                return False, "Binary data detected in text document payload"
+            return True, "valid_text"
+
+        return True, "valid"
+
     def parse(self, file_path: str, filename: str) -> Dict[str, Any]:
         ext = Path(filename).suffix.lower()
         if ext == ".pdf":
