@@ -7,6 +7,7 @@ import CustomCursor from './components/CustomCursor';
 import ScrollProgress from './components/ScrollProgress';
 import FloatingParticles from './components/FloatingParticles';
 import Toast from './components/Toast';
+import NetworkStatusBanner from './components/NetworkStatusBanner';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 
 import LoginPage from './pages/LoginPage';
@@ -75,6 +76,7 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
+            <NetworkStatusBanner />
             <CustomCursor />
             <ScrollProgress />
             <FloatingParticles />
