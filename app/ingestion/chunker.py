@@ -56,7 +56,7 @@ class DocumentChunker:
             text = el.get("text", "").strip()
             if not text:
                 continue
-            if self.sentence_aware and len(text) > self.target_chunk_size and el.get("element_type") != "Table":
+            if self.sentence_aware and len(text) > self.target_chunk_size and el.get("element_type") not in ("Table", "CodeBlock"):
                 sentences = self.split_into_sentences(text)
                 if len(sentences) > 1:
                     for s in sentences:
@@ -88,6 +88,29 @@ class DocumentChunker:
             # Track section headers (Title, Header, Subheader)
             if el_type in ("Title", "Header", "Subheader") or el_text.startswith(("# ", "## ", "### ")):
                 current_heading = el_text.lstrip("#").strip()
+
+            # Isolate structured tables and code blocks to preserve structural integrity
+            if el_type in ("Table", "CodeBlock") and current_text_parts and current_size > 200:
+                full_chunk_text = " ".join(current_text_parts)
+                words = full_chunk_text.split()
+                chunk_meta = {
+                    "element_type": current_type,
+                    "page_number": current_page,
+                    "coordinates": current_coords,
+                    "filename": filename,
+                    "chunk_size": len(full_chunk_text),
+                    "word_count": len(words),
+                    "estimated_tokens": estimate_tokens(full_chunk_text),
+                    "chunk_index": chunk_index,
+                    "section_heading": current_heading
+                }
+                chunks.append({
+                    "chunk_text": full_chunk_text,
+                    "chunk_metadata_json": json.dumps(chunk_meta)
+                })
+                chunk_index += 1
+                current_text_parts = []
+                current_size = 0
 
             current_text_parts.append(el_text)
             current_size += len(el_text) + 1
