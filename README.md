@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
-![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.7-blue)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.8-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
@@ -19,6 +19,11 @@
 
 ### 📄 Document Processing
 - ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, and Markdown (MD) files
+- ✅ **Soft-Deletion & Archiving**: Safe document archiving (`is_archived`) preserving vector chunks and history
+- ✅ **Table & Code Block Integrity**: Boundary-aware chunking preserving markdown table and code block layout
+- ✅ **Duplicate Storage Cleanup**: Automatic duplicate detection (`/documents/duplicates`) measuring reclaimable space
+- ✅ **LRU Query Vector Cache**: High-performance in-memory caching reducing repetitive Q&A retrieval latency
+- ✅ **Catalog Consistency Tool**: CLI health auditor and orphaned chunk purger (`scripts/catalog_health.py`)
 - ✅ **Directory Watcher Auto-Ingestion**: Autonomous folder daemon (`scripts/watch_folder.py`) auto-ingesting dropped files
 - ✅ **Lifecycle Status Polling API**: Track document parsing durations, chunk counts, and health (`/documents/{id}/status`)
 - ✅ **Aggregated Catalog Analytics**: Real-time storage volume, format distribution, and processing latency stats (`/analytics/overview`)

@@ -5,6 +5,21 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2026-11-26
+
+### Added
+- **Adversarial Stealth De-obfuscation**: Added zero-width unicode character stripping and base64 payload decoding to `Guardrails.detect_prompt_injection`.
+- **Catalog Duplicate Detection API**: Added `GET /api/v1/documents/duplicates` grouping duplicate SHA-256 records and calculating reclaimable storage.
+- **Table & Code Block Integrity Protection**: Enhanced `DocumentChunker` in `app/ingestion/chunker.py` to prevent fractured markdown tables and severed code blocks.
+- **Document Soft-Deletion & Archiving Architecture**: Added `is_archived` and `archived_at` database fields, SQLite migrations, and archive/restore database helpers.
+- **Document Archive & Restore Endpoints**: Added `POST /api/v1/documents/{id}/archive` and `POST /api/v1/documents/{id}/restore`, with `include_archived` filter support.
+- **In-Memory LRU Query Vector Cache**: Implemented `QueryVectorCache` with 10-minute TTL in `app/db/vector_store.py` reducing repetitive retrieval latency.
+- **Catalog Consistency & Orphan Cleanup Tool**: Created `scripts/catalog_health.py` auditing database records against filesystem storage with `--fix` orphaned chunk removal.
+- **Interactive Archive Badge UI Component**: Created `ArchiveBadge.jsx` with visual status indicators and 1-click restoration triggers.
+- **Unit Test Coverage Expansion**: Created `tests/test_archiving_and_tables.py` covering table structure preservation, code blocks, and archive lifecycles.
+
+---
+
 ## [1.3.7] - 2026-11-26
 
 ### Added
