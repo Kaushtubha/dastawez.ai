@@ -222,6 +222,34 @@ def get_document_details(id: int, db: Session = Depends(get_db)):
     return doc_dict
 
 
+@router.get("/documents/{id}/status", summary="Get Document Ingestion Status")
+def get_document_status(id: int, db: Session = Depends(get_db)):
+    """
+    Retrieves processing lifecycle status, duration, chunk count, and health of an ingested document.
+    """
+    doc = get_document_by_id(db, id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+
+    chunks = get_chunks_by_document(db, id)
+    doc_dict = doc.to_dict()
+    analysis = doc_dict.get("metadata", {}).get("analysis", {})
+
+    return {
+        "document_id": doc.id,
+        "filename": doc.filename,
+        "status": doc.status or "processed",
+        "chunks_count": len(chunks),
+        "total_elements": analysis.get("total_elements", 0),
+        "total_pages": analysis.get("total_pages", 1),
+        "file_size_bytes": doc.file_size,
+        "checksum_sha256": doc.checksum_sha256,
+        "processing_duration_ms": doc.processing_duration_ms,
+        "error_message": doc.error_message,
+        "upload_date": doc.upload_date.isoformat() if doc.upload_date else None
+    }
+
+
 @router.get("/documents/{id}/export", summary="Export Document Metadata & Chunks")
 def export_document_data(
     id: int,
