@@ -1,12 +1,45 @@
 import json
 import math
 import re
+import time
+import hashlib
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from collections import Counter
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class QueryVectorCache:
+    """In-memory LRU search result cache with TTL to eliminate repetitive retrieval latency."""
+
+    def __init__(self, max_size: int = 256, ttl_seconds: int = 600):
+        self.max_size = max_size
+        self.ttl_seconds = ttl_seconds
+        self._cache: Dict[str, Tuple[float, Any]] = {}
+
+    def _make_key(self, query: str, chunk_ids: List[int], top_k: int) -> str:
+        raw_key = f"{query.lower().strip()}_{chunk_ids[:50]}_{len(chunk_ids)}_{top_k}"
+        return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+    def get(self, query: str, chunks: List[Dict[str, Any]], top_k: int) -> Optional[List[Dict[str, Any]]]:
+        chunk_ids = [c.get("id", 0) for c in chunks]
+        key = self._make_key(query, chunk_ids, top_k)
+        if key in self._cache:
+            ts, val = self._cache[key]
+            if time.time() - ts < self.ttl_seconds:
+                return [dict(item) for item in val]
+            del self._cache[key]
+        return None
+
+    def set(self, query: str, chunks: List[Dict[str, Any]], top_k: int, value: List[Dict[str, Any]]):
+        if len(self._cache) >= self.max_size:
+            oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k][0])
+            del self._cache[oldest_key]
+        chunk_ids = [c.get("id", 0) for c in chunks]
+        key = self._make_key(query, chunk_ids, top_k)
+        self._cache[key] = (time.time(), [dict(item) for item in value])
 
 # Try importing Qdrant
 try:
@@ -85,6 +118,7 @@ class VectorStore:
     def __init__(self):
         self.qdrant_client: Optional[Any] = None
         self.collection_name = "documind_chunks"
+        self.cache = QueryVectorCache()
         self._init_qdrant()
 
     def _init_qdrant(self):
@@ -113,6 +147,11 @@ class VectorStore:
         if not chunks:
             return []
 
+        # Check LRU vector cache
+        cached = self.cache.get(query, chunks, top_k)
+        if cached is not None:
+            return cached
+
         # If only a few chunks, return them all with normalized default scores
         if len(chunks) <= top_k:
             results = []
@@ -120,6 +159,7 @@ class VectorStore:
                 item = dict(c)
                 item["score"] = 0.85
                 results.append(item)
+            self.cache.set(query, chunks, top_k, results)
             return results
 
         texts = [c.get("chunk_text", "") for c in chunks]
@@ -173,6 +213,7 @@ class VectorStore:
                     chunk_copy = dict(chunks[idx])
                     chunk_copy["score"] = score
                     results.append(chunk_copy)
+            self.cache.set(query, chunks, top_k, results)
             return results
         except Exception as e:
             logger.error("Pure Python TF-IDF search error: %s", e)
@@ -187,7 +228,9 @@ class VectorStore:
             item["score"] = score
             scored.append(item)
         scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:top_k]
+        res = scored[:top_k]
+        self.cache.set(query, chunks, top_k, res)
+        return res
 
 
 vector_store = VectorStore()
