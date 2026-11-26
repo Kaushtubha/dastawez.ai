@@ -157,11 +157,15 @@ async def upload_document(
 
 
 @router.get("/document-history", summary="List All Ingested Documents")
-def list_documents(db: Session = Depends(get_db)):
+def list_documents(
+    include_archived: bool = Query(False, description="Whether to include soft-deleted/archived documents"),
+    db: Session = Depends(get_db)
+):
     """Retrieves all uploaded documents with metadata & statistics."""
-    docs = get_documents(db)
+    docs = get_documents(db, include_archived=include_archived)
     return {
         "total": len(docs),
+        "include_archived": include_archived,
         "documents": [doc.to_dict() for doc in docs]
     }
 
@@ -378,6 +382,26 @@ def remove_document(id: int, db: Session = Depends(get_db)):
 
     success = delete_document(db, id)
     return {"success": success, "message": f"Document {id} deleted successfully"}
+
+
+@router.post("/documents/{id}/archive", summary="Soft-Delete Archive Document")
+def archive_document_endpoint(id: int, db: Session = Depends(get_db)):
+    """Soft-deletes a document and hides it from default history views without losing vector chunks."""
+    from app.db.metadata import archive_document
+    success = archive_document(db, id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+    return {"success": True, "message": f"Document #{id} successfully archived"}
+
+
+@router.post("/documents/{id}/restore", summary="Restore Archived Document")
+def restore_document_endpoint(id: int, db: Session = Depends(get_db)):
+    """Restores an archived document back into active catalog views."""
+    from app.db.metadata import restore_document
+    success = restore_document(db, id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document #{id} not found")
+    return {"success": True, "message": f"Document #{id} successfully restored"}
 
 
 class BatchDeleteRequest(BaseModel):
