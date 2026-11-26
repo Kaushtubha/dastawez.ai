@@ -43,6 +43,8 @@ class Document(Base):
     processing_duration_ms = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
     metadata_json = Column(Text, nullable=True)
+    is_archived = Column(Boolean, default=False, index=True)
+    archived_at = Column(DateTime, nullable=True)
 
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
 
@@ -64,6 +66,8 @@ class Document(Base):
             "checksum_sha256": self.checksum_sha256,
             "processing_duration_ms": self.processing_duration_ms,
             "error_message": self.error_message,
+            "is_archived": bool(self.is_archived),
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
             "metadata": meta
         }
 
@@ -132,6 +136,10 @@ def init_db():
                 cursor.execute("ALTER TABLE documents ADD COLUMN processing_duration_ms INTEGER;")
             if "error_message" not in columns:
                 cursor.execute("ALTER TABLE documents ADD COLUMN error_message TEXT;")
+            if "is_archived" not in columns:
+                cursor.execute("ALTER TABLE documents ADD COLUMN is_archived BOOLEAN DEFAULT 0;")
+            if "archived_at" not in columns:
+                cursor.execute("ALTER TABLE documents ADD COLUMN archived_at DATETIME;")
             conn.connection.commit()
     except Exception as e:
         print(f"Schema migration note: {e}")
@@ -148,8 +156,33 @@ def get_db() -> Generator[Session, None, None]:
 
 
 # Database Queries and Helpers
-def get_documents(db: Session, skip: int = 0, limit: int = 100) -> List[Document]:
-    return db.query(Document).order_by(Document.id.desc()).offset(skip).limit(limit).all()
+def get_documents(db: Session, skip: int = 0, limit: int = 100, include_archived: bool = False) -> List[Document]:
+    q = db.query(Document)
+    if not include_archived:
+        q = q.filter(Document.is_archived == False)
+    return q.order_by(Document.id.desc()).offset(skip).limit(limit).all()
+
+
+def archive_document(db: Session, doc_id: int) -> bool:
+    """Soft-deletes a document by marking is_archived flag without deleting vector chunks."""
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        return False
+    doc.is_archived = True
+    doc.archived_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
+def restore_document(db: Session, doc_id: int) -> bool:
+    """Restores an archived document back into active catalog queries."""
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        return False
+    doc.is_archived = False
+    doc.archived_at = None
+    db.commit()
+    return True
 
 
 def get_document_by_id(db: Session, doc_id: int) -> Optional[Document]:
