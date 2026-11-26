@@ -5,6 +5,16 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.7] - 2026-11-26
+
+### Added
+- **Document Processing Status Polling API**: Implemented `GET /api/v1/documents/{id}/status` providing real-time ingestion status (`processed`, `pending`, `failed`), processing duration, chunk count, and SHA-256 fingerprinting.
+- **Aggregated Catalog Analytics Engine**: Added `GET /api/v1/analytics/overview` aggregating total storage volume (bytes, KB, MB), format distribution counters, and average processing latency.
+- **Automated Directory Watcher Daemon**: Created `scripts/watch_folder.py` CLI daemon monitoring incoming folders for newly dropped files, auto-verifying signatures, and indexing documents.
+- **Lifecycle & Analytics Unit Test Suite**: Created `tests/test_analytics_and_status.py` validating 404 status error handling and catalog aggregation metrics.
+
+---
+
 ## [1.3.6] - 2026-11-25
 
 ### Added
