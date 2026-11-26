@@ -1,8 +1,12 @@
 import re
+import base64
 from typing import Dict, Any, List, Tuple
 
 class Guardrails:
     """Security, input sanitation, prompt injection defense, PII redaction, and response confidence scoring."""
+
+    # Zero-width unicode characters used in adversarial stealth injections
+    ZERO_WIDTH_PATTERN = re.compile(r"[\u200B-\u200D\uFEFF\u2060\u200E\u200F\u00AD]")
 
     # Common prompt injection, override, and jailbreak signatures
     PROMPT_INJECTION_PATTERNS = [
@@ -20,16 +24,39 @@ class Guardrails:
     API_KEY_PATTERN = re.compile(r"\b(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9_-]{20,})\b")
 
     @classmethod
+    def _inspect_base64_payloads(cls, text: str) -> Tuple[bool, str]:
+        """Inspects potential base64 embedded strings for hidden injection instructions."""
+        b64_matches = re.findall(r"\b[A-Za-z0-9+/]{20,}={0,2}\b", text)
+        for token in b64_matches:
+            try:
+                decoded = base64.b64decode(token, validate=True).decode("utf-8", errors="ignore")
+                for pattern, reason in cls.PROMPT_INJECTION_PATTERNS:
+                    if pattern.search(decoded):
+                        return True, f"base64_obfuscated_{reason}"
+            except Exception:
+                continue
+        return False, ""
+
+    @classmethod
     def detect_prompt_injection(cls, query: str) -> Tuple[bool, str]:
         """
-        Inspects query string for known adversarial injection or prompt hijacking patterns.
+        Inspects query string for known adversarial injection or prompt hijacking patterns,
+        including zero-width de-obfuscation and base64 payload inspection.
         Returns (is_detected, reason_code).
         """
         if not query:
             return False, ""
+
+        clean_query = cls.ZERO_WIDTH_PATTERN.sub("", query)
         for pattern, reason in cls.PROMPT_INJECTION_PATTERNS:
-            if pattern.search(query):
+            if pattern.search(clean_query):
                 return True, reason
+
+        # Check for encoded base64 obfuscation attacks
+        is_b64, b64_reason = cls._inspect_base64_payloads(query)
+        if is_b64:
+            return True, b64_reason
+
         return False, ""
 
     @classmethod
@@ -45,12 +72,13 @@ class Guardrails:
         clean = cls.PHONE_PATTERN.sub("[REDACTED_PHONE]", clean)
         return clean
 
-    @staticmethod
-    def sanitize_input(text: str) -> str:
+    @classmethod
+    def sanitize_input(cls, text: str) -> str:
         if not text:
             return ""
-        # Remove null bytes and excessive whitespace
-        clean = text.replace("\x00", "").strip()
+        # Strip zero-width chars, null bytes and excessive whitespace
+        clean = cls.ZERO_WIDTH_PATTERN.sub("", text)
+        clean = clean.replace("\x00", "").strip()
         clean = re.sub(r"\s+", " ", clean)
         return clean[:1000] # Limit query length
 
