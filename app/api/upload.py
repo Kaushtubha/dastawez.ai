@@ -208,6 +208,48 @@ def search_documents_catalog(
 
 
 
+@router.get("/documents/duplicates", summary="Detect Catalog Duplicate Documents")
+def detect_duplicate_documents(db: Session = Depends(get_db)):
+    """
+    Identifies exact binary duplicates (matching SHA-256) across all stored documents
+    and calculates reclaimable disk storage.
+    """
+    from collections import defaultdict
+    all_docs = get_documents(db, limit=1000)
+    hash_map = defaultdict(list)
+
+    for d in all_docs:
+        if d.checksum_sha256:
+            hash_map[d.checksum_sha256].append(d)
+
+    duplicate_groups = []
+    reclaimable_bytes = 0
+
+    for chk, docs_group in hash_map.items():
+        if len(docs_group) > 1:
+            size = docs_group[0].file_size or 0
+            wasted = size * (len(docs_group) - 1)
+            reclaimable_bytes += wasted
+            duplicate_groups.append({
+                "checksum_sha256": chk,
+                "copies_count": len(docs_group),
+                "file_size_bytes": size,
+                "reclaimable_bytes": wasted,
+                "documents": [
+                    {"id": d.id, "filename": d.filename, "upload_date": d.upload_date.isoformat() if d.upload_date else None}
+                    for d in docs_group
+                ]
+            })
+
+    return {
+        "duplicate_groups_count": len(duplicate_groups),
+        "total_duplicate_documents": sum(g["copies_count"] for g in duplicate_groups),
+        "total_reclaimable_bytes": reclaimable_bytes,
+        "total_reclaimable_kb": round(reclaimable_bytes / 1024, 2),
+        "groups": duplicate_groups
+    }
+
+
 @router.get("/documents/{id}", summary="Get Single Document Details")
 def get_document_details(id: int, db: Session = Depends(get_db)):
     """Retrieves specific document details and chunk previews."""
