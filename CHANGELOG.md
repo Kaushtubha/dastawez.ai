@@ -5,6 +5,17 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - 2026-11-27
+
+### Added
+- **OpenAPI Specification & Operational Tagging**: Enriched FastAPI OpenAPI metadata with distinct `System Analytics` tags and extended endpoint descriptions.
+- **Rich Text Format (.rtf) Document Ingestion**: Added RTF magic byte detection (`{\rtf`) and native control sequence extraction in `DocumentParser`.
+- **Trusted Host Validation Security Middleware**: Added `TrustedHostMiddleware` with environment-driven `ALLOWED_HOSTS` configuration in `app/main.py`.
+- **Parser Memory & Latency Profiler Utility**: Created `scripts/profile_parser.py` utilizing `tracemalloc` to profile peak RAM allocations and throughput.
+- **Extended Test Suite Coverage**: Created `tests/test_parser_and_security_extensions.py` verifying RTF extraction and security configuration.
+
+---
+
 ## [1.3.8] - 2026-11-26
 
 ### Added
