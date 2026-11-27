@@ -5,6 +5,16 @@ All notable changes to Dastawez.ai (DocuMind) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-28
+
+### Added
+- **Path Traversal Protection & Filename Sanitization**: Added `sanitize_filename` in `app/ingestion/parser.py` and `app/api/upload.py` stripping directory traversal (`../`, `..\`), null bytes, control characters, and Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`).
+- **Bulk Document Status Retrieval Endpoint**: Implemented `POST /api/v1/documents/bulk-status` with `BulkStatusRequest` enabling batch queries of document processing states, durations, chunk counts, and missing IDs in a single round-trip.
+- **Full-Text Chunk Search Optimization**: Added `search_chunks_fts` in `app/db/metadata.py` providing optimized multi-word full-text query matching at the database layer.
+- **Security & Bulk Test Suite**: Created automated test suite `tests/test_upload_security_and_bulk.py` verifying path traversal defenses, reserved device names, null-byte sanitization, bulk status queries, and FTS chunk searching.
+
+---
+
 ## [1.3.9] - 2026-11-27
 
 ### Added

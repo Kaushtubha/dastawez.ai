@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Dastawez.ai](https://img.shields.io/badge/Dastawez.ai-IDP-purple)
-![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.3.9-blue)
+![DocuMind Engine](https://img.shields.io/badge/DocuMind-v1.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
@@ -19,6 +19,9 @@
 
 ### 📄 Document Processing
 - ✅ **Multi-Format Support**: Upload PDF, DOCX, TXT, Markdown (MD), and Rich Text (RTF) files
+- ✅ **Path Traversal Defense & Sanitization**: Filename sanitization stripping directory traversal sequences (`../`), null bytes, and Windows device identifiers
+- ✅ **Bulk Document Status API**: Single-request status polling for batch document workflows (`/documents/bulk-status`)
+- ✅ **Full-Text Chunk Search (FTS)**: Optimized keyword and clause matching at the database layer
 - ✅ **Parser RAM & Latency Profiler**: CLI profiler measuring peak heap memory allocations (`scripts/profile_parser.py`)
 - ✅ **Trusted Host Protection**: Dynamic host validation middleware guarding against HTTP header attacks
 - ✅ **Soft-Deletion & Archiving**: Safe document archiving (`is_archived`) preserving vector chunks and history
