@@ -66,6 +66,11 @@ class Settings:
             "http://localhost:5173,http://localhost:3000,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:3000,http://localhost:8000"
         ).split(",") if origin.strip()
     ]
+
+    # Host Validation
+    ALLOWED_HOSTS: list = [
+        host.strip() for host in os.getenv("ALLOWED_HOSTS", "*").split(",") if host.strip()
+    ] or ["*"]
     
     # Static & Upload folder ensure
     def __init__(self):
