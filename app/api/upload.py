@@ -283,6 +283,52 @@ def detect_duplicate_documents(db: Session = Depends(get_db)):
     }
 
 
+class BulkStatusRequest(BaseModel):
+    document_ids: List[int] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of document IDs to query in a single request"
+    )
+
+
+@router.post("/documents/bulk-status", summary="Get Bulk Document Statuses")
+def get_bulk_document_status(req: BulkStatusRequest, db: Session = Depends(get_db)):
+    """
+    Returns processing status, chunk count, file size, and duration for multiple documents.
+    """
+    from app.db.metadata import Document
+    queried_docs = db.query(Document).filter(Document.id.in_(req.document_ids)).all()
+    found_map = {d.id: d for d in queried_docs}
+
+    statuses = {}
+    missing_ids = []
+
+    for doc_id in req.document_ids:
+        if doc_id in found_map:
+            d = found_map[doc_id]
+            chunks_count = len(d.chunks) if d.chunks else 0
+            statuses[str(doc_id)] = {
+                "id": d.id,
+                "filename": d.filename,
+                "status": d.status or "processed",
+                "chunks_count": chunks_count,
+                "file_size_bytes": d.file_size,
+                "processing_duration_ms": d.processing_duration_ms,
+                "is_archived": bool(d.is_archived),
+                "error_message": d.error_message
+            }
+        else:
+            missing_ids.append(doc_id)
+
+    return {
+        "requested_count": len(req.document_ids),
+        "found_count": len(statuses),
+        "statuses": statuses,
+        "missing_ids": missing_ids
+    }
+
+
 @router.get("/documents/{id}", summary="Get Single Document Details")
 def get_document_details(id: int, db: Session = Depends(get_db)):
     """Retrieves specific document details and chunk previews."""
