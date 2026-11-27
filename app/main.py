@@ -30,6 +30,10 @@ TAGS_METADATA = [
     {
         "name": "System",
         "description": "Health checks, runtime configuration, and platform telemetry endpoints."
+    },
+    {
+        "name": "System Analytics",
+        "description": "Aggregated catalog metrics, storage volume analytics, format distributions, and performance telemetry."
     }
 ]
 
@@ -48,7 +52,7 @@ app = FastAPI(
         "and Conversational Question-Answering platform. It features layout-preserving element "
         "extraction, spatial coordinate retention, hybrid vector search, and grounded citations."
     ),
-    version="1.3.4",
+    version="1.3.9",
     openapi_tags=TAGS_METADATA,
     contact={
         "name": "Dastawez.ai Engineering Support",
@@ -182,7 +186,7 @@ def health_check():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "version": "1.3.5"
+        "version": "1.3.9"
     }
 
 @app.get("/api/v1/health/liveness", tags=["System"], summary="Kubernetes Liveness Probe")
@@ -252,7 +256,7 @@ def detailed_health_check():
     return {
         "status": overall_status,
         "app": settings.APP_NAME,
-        "version": "1.3.5",
+        "version": "1.3.9",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "probes": {
             "liveness": "passing",
@@ -282,7 +286,7 @@ def system_capabilities_endpoint():
     from app.db.vector_store import HAS_QDRANT
     return {
         "app_name": settings.APP_NAME,
-        "version": "1.3.5",
+        "version": "1.3.9",
         "supported_formats": sorted(list(settings.ALLOWED_EXTENSIONS)),
         "max_upload_size_bytes": settings.MAX_UPLOAD_SIZE,
         "max_upload_size_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024),
