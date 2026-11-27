@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 from typing import Generator, List, Optional, Dict, Any
 from sqlalchemy import (
@@ -11,7 +12,8 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     func,
-    text
+    text,
+    or_
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from app.config import settings
@@ -269,6 +271,34 @@ def create_chunk(
 
 def get_chunks_by_document(db: Session, document_id: int) -> List[Chunk]:
     return db.query(Chunk).filter(Chunk.document_id == document_id).all()
+
+
+def search_chunks_fts(
+    db: Session,
+    query: str,
+    document_id: Optional[int] = None,
+    limit: int = 25
+) -> List[Chunk]:
+    """
+    Performs fast multi-word keyword search across chunks at database query layer.
+    """
+    if not query or not query.strip():
+        return []
+
+    clean_q = query.strip()
+    words = [w for w in re.findall(r"\w+", clean_q) if len(w) >= 3]
+
+    q_builder = db.query(Chunk)
+    if document_id:
+        q_builder = q_builder.filter(Chunk.document_id == document_id)
+
+    if words:
+        conditions = [Chunk.chunk_text.ilike(f"%{w}%") for w in words[:6]]
+        q_builder = q_builder.filter(or_(*conditions))
+    else:
+        q_builder = q_builder.filter(Chunk.chunk_text.ilike(f"%{clean_q}%"))
+
+    return q_builder.limit(limit).all()
 
 
 # User Query Helpers
