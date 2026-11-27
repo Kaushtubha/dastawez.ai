@@ -52,8 +52,8 @@ class Settings:
     MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024))) # 50 MB
     UPLOAD_FOLDER: Path = BASE_DIR / os.getenv("UPLOAD_FOLDER", "uploads")
     ALLOWED_EXTENSIONS: set = set(
-        ext.strip().lower().lstrip(".") for ext in os.getenv("ALLOWED_EXTENSIONS", "pdf,docx,txt,md,markdown").split(",") if ext.strip()
-    ) or {"pdf", "docx", "txt", "md", "markdown"}
+        ext.strip().lower().lstrip(".") for ext in os.getenv("ALLOWED_EXTENSIONS", "pdf,docx,txt,md,markdown,rtf").split(",") if ext.strip()
+    ) or {"pdf", "docx", "txt", "md", "markdown", "rtf"}
     
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "True").lower() in ("true", "1", "yes")

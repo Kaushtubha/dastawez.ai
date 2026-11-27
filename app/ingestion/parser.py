@@ -113,6 +113,11 @@ class DocumentParser:
                 return False, "Invalid DOCX header: Missing PK ZIP signature"
             return True, "valid_docx"
 
+        if ext == "rtf":
+            if not header.startswith(b"{\\rtf"):
+                return False, "Invalid RTF header: Missing {\\rtf signature"
+            return True, "valid_rtf"
+
         if ext in ("txt", "md", "markdown"):
             if b"\x00" in header:
                 return False, "Binary data detected in text document payload"
@@ -128,6 +133,8 @@ class DocumentParser:
             elements, total_pages = self._parse_docx(file_path)
         elif ext in (".md", ".markdown"):
             elements, total_pages = self._parse_markdown(file_path)
+        elif ext == ".rtf":
+            elements, total_pages = self._parse_rtf(file_path)
         else:
             elements, total_pages = self._parse_txt(file_path)
 
@@ -239,6 +246,30 @@ class DocumentParser:
             else:
                 el_type = "NarrativeText"
             elements.append(ParsedElement(text=para, element_type=el_type, page_number=page_num))
+
+        return elements, total_pages
+
+    def _parse_rtf(self, file_path: str) -> Tuple[List[ParsedElement], int]:
+        """Parses Rich Text Format (RTF) documents by stripping control codes."""
+        raw_content = self._read_file_safe(file_path)
+        # Strip RTF font/color table groups
+        cleaned = re.sub(r"\{\\[^{}]*\}", "", raw_content)
+        # Replace paragraph and line breaks
+        cleaned = re.sub(r"\\(par|line)\b", "\n", cleaned)
+        # Strip formatting control words
+        cleaned = re.sub(r"\\[a-zA-Z0-9-]+\s?", "", cleaned)
+        cleaned = cleaned.replace("{", "").replace("}", "").strip()
+
+        paragraphs = [p.strip() for p in cleaned.split("\n") if p.strip()]
+        if not paragraphs:
+            return [ParsedElement(text="Empty RTF document.", element_type="NarrativeText")], 1
+
+        elements: List[ParsedElement] = []
+        total_pages = max(1, len(paragraphs) // 10)
+        for idx, p in enumerate(paragraphs):
+            page_num = (idx // 10) + 1
+            el_type = "Title" if len(p) < 60 and (p.isupper() or p.endswith(":")) else "NarrativeText"
+            elements.append(ParsedElement(text=p, element_type=el_type, page_number=page_num))
 
         return elements, total_pages
 
