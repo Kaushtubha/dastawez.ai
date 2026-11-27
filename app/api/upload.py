@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import csv
 import json
 import time
@@ -27,6 +28,33 @@ from app.db.metadata import (
 from app.ingestion.parser import parse_document
 from app.ingestion.chunker import create_chunks
 
+WINDOWS_RESERVED_NAMES = {
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
+    "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
+    "LPT6", "LPT7", "LPT8", "LPT9"
+}
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitizes uploaded filenames to prevent directory traversal and filesystem injection.
+    Strips path separators, null bytes, control characters, and reserved Windows identifiers.
+    """
+    if not filename:
+        return "uploaded_document.pdf"
+
+    base = Path(filename).name
+    base = re.sub(r"[\x00-\x1f\x7f]", "", base)
+    base = re.sub(r'[\\/*?:"<>|]', "_", base).strip()
+    base = base.lstrip(".-") or "document"
+
+    stem = Path(base).stem.upper()
+    if stem in WINDOWS_RESERVED_NAMES:
+        base = f"safe_{base}"
+
+    return base[:200]
+
+
 router = APIRouter()
 
 @router.post("/upload-docs", summary="Upload & Process Document")
@@ -37,7 +65,8 @@ async def upload_document(
 ):
     """Uploads, hashes (SHA-256), parses, segments into chunks, and indexes a document."""
     start_time = time.perf_counter()
-    filename = file.filename or "uploaded_document.pdf"
+    raw_filename = file.filename or "uploaded_document.pdf"
+    filename = sanitize_filename(raw_filename)
     ext = Path(filename).suffix.lower().lstrip(".")
 
     if ext not in settings.ALLOWED_EXTENSIONS:
